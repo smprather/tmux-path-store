@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import orjson
+
+MIN_PYTHON = (3, 9)
+if sys.version_info < MIN_PYTHON:
+    sys.exit("Python %s.%s or later is required.\n" % MIN_PYTHON)
+
+# from peek import peek as p
+#
+# p.color = "yellow"
+# p.color_value = "red"
+
+g_script = Path(__file__).name
+
+g_help = """
+Alias             Action
+==================================================================
+shd, sdh          Set home directory (same as sd0)
+cdh               cd home directory (same as cd0)
+f[0-9]            Edit file # with your $EDITOR
+sd[0-9]           Set directory # to the pwd
+sf[0-9] <file>    Set file # to <file>
+rd[0-9], rf[0-9]  Reset(delete) file/directory
+cd[0-9]           cd to directory #i
+ld, lf            List directories/files for the current window
+lda, lfa          List directories/files for all windows
+lw                List all windows
+dw [<window>...]  Delete window(s) store. Default: Current window
+swd, swf <#> <#>  Swap dir/file index 1 with index 2
+tps               Print this help
+""".strip()
+
+
+def eprint(msg, then_exit=True, rc=1):
+    """Since we are normally having the stdout eval'd by the shell, error messages
+    should go to stderr. Then send a 'false' command for eval by the shell which
+    produces an non-zero return code (rc=1).
+    """
+    print(f"{g_script}: Error: {msg}", file=sys.stderr)
+    if then_exit:
+        print("false", end="")
+        sys.exit(rc)
+
+
+def print_window_contents(db: dict[str], window_name: str, ford: str):
+    print(f"Window: {window_name}")
+    for i in range(0, 10):
+        print(f"  {i}: {db[window_name][ford][i]}")
+
+
+def cli():
+    if len(sys.argv) < 2 or sys.argv[1] in ["-h", "--help", "help"]:
+        print(g_help)
+        sys.exit()
+
+    if sys.argv[1] == "--bash":
+        for alias in (
+            f"alias ld='{g_script} list-dirs'; ",
+            f"alias lf='{g_script} list-files'; ",
+            f"alias lda='{g_script} list-dirs __all__'; ",
+            f"alias lfa='{g_script} list-files __all__'; ",
+            f"alias lw='{g_script} list-windows'; ",
+            f"alias dw='{g_script} delete-window'; ",
+            f"alias cdh='eval $({g_script} cd 0)'; ",
+            f"alias shd='{g_script} set-dir 0'; ",
+            f"alias sdh='{g_script} set-dir 0'; ",
+            f"alias swd='{g_script} swap-dir'; ",
+            f"alias swf='{g_script} swap-file'; ",
+            f"alias tps='{g_script} help'; ",
+            "for x in $(seq 0 9); do ",
+            f'    alias cd$x="eval \\$({g_script} cd $x)"; ',
+            f'    alias sd$x="{g_script} set-dir $x"; ',
+            f'    alias sf$x="{g_script} set-file $x"; ',
+            f'    alias rd$x="{g_script} reset-dir $x"; ',
+            f'    alias rf$x="{g_script} reset-file $x"; ',
+            f'    alias f$x="eval \\$({g_script} edit $x)"; ',
+            "done",
+        ):
+            print(alias.lstrip(), end="")
+        print("")
+        sys.exit()
+
+    db_dir = Path(f"{os.environ['HOME']}/.local/state/{g_script}")
+    db_dir.mkdir(parents=True, exist_ok=True)
+    db_file = db_dir / "db.json"
+    sub_cmd = sys.argv[1]
+    if len(sys.argv) > 2:
+        args = sys.argv[2:]
+    else:
+        args = []
+
+    if "dir" in sub_cmd:
+        ford = "dirs"
+    elif "file" in sub_cmd:
+        ford = "files"
+    else:
+        ford = ""
+
+    if not (window := os.getenv("TMUX_WINDOW")):
+        user = os.environ["USER"]
+        tmux_server_binary_holder_file = Path(f"/tmp/{g_script}_server_binary.{user}")
+
+        tmux_server_binary = None
+        if tmux_server_binary_holder_file.exists():
+            tmux_server_binary = Path(tmux_server_binary_holder_file.read_text())
+            if not tmux_server_binary.exists():
+                tmux_server_binary_holder_file.unlink(missing_ok=True)
+                tmux_server_binary = None
+
+        if tmux_server_binary is None:
+            try:
+                tmux_server_binary = Path(
+                    "/proc/"
+                    + subprocess.run(
+                        ["/usr/bin/pgrep", "-f", "-u", user, "tmux$"],
+                        capture_output=True,
+                        text=True,
+                    ).stdout.split()[0]
+                    + "/exe"
+                ).resolve()
+                tmux_server_binary_holder_file.write_text(str(tmux_server_binary))
+            except IndexError:
+                eprint("We do not appear to be in a tmux session.")
+
+        try:
+            window = (
+                subprocess.check_output(
+                    f"{tmux_server_binary} display-message -p '#W'",
+                    shell=True,
+                )
+                .decode("utf-8")
+                .rstrip()
+            )
+        except subprocess.CalledProcessError:
+            eprint(
+                "There was a problem running tmux display-message -p '#W'.\n"
+                "There is probably not a running tmux session on this host.\n"
+                "Try pgrep -u $USER -a tmux."
+            )
+
+    if db_file.exists():
+        with db_file.open(mode="rb") as fh:
+            db = orjson.loads(fh.read())
+    else:
+        db = dict()
+
+    if sub_cmd not in [
+        "set-dir",
+        "set-file",
+        "list-windows",
+        "list-all-windows",
+    ]:
+        if window not in db:
+            eprint(
+                f"Window {window} is not in the db. Use set-dir/set-file to init this window.\n"
+                "You should have shd/sd/sf aliases to these sub-commands."
+            )
+
+    write_db = False
+
+    if sub_cmd == "cd":
+        dir_lookup = db[window]["dirs"][int(args[0])]
+        if dir_lookup == "":
+            eprint(f"Directory {args[0]} is not defined for window '{window}'.")
+        else:
+            print(f"cd {dir_lookup}", end="")
+
+    elif sub_cmd == "edit":
+        dir_lookup = db[window]["files"][int(args[0])]
+        if dir_lookup == "":
+            eprint(f"File {args[0]} is not defined for window '{window}'.")
+        else:
+            print(f"$EDITOR {dir_lookup}", end="")
+
+    elif sub_cmd in ["list-dirs", "list-files"]:
+        if args == ["__all__"]:
+            # Print the current window contents last
+            for window_name in [x for x in sorted(db.keys()) if x != window]:
+                print_window_contents(db, window_name, ford)
+            print_window_contents(db, window, ford)
+        elif len(args) > 0:
+            for window_name in args:
+                if window_name in db:
+                    print_window_contents(db, window_name, ford)
+                else:
+                    eprint(f"Window {window_name} has not been defined.", then_exit=False)
+        else:
+            print_window_contents(db, window, ford)
+
+    elif sub_cmd == "set-dir":
+        db[window] = db.get(window) or dict(dirs=[""] * 10, files=[""] * 10)
+        db[window][ford][int(args[0])] = os.getcwd()
+        write_db = True
+    elif sub_cmd == "set-file":
+        db[window] = db.get(window) or dict(dirs=[""] * 10, files=[""] * 10)
+        # If no file is given, default to the most recently modified
+        if len(args) == 1:
+            most_recent_modified = subprocess.getoutput(
+                "find . -maxdepth 1 -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -d' ' -f2-"
+            )
+            if most_recent_modified == "":
+                eprint("There are no files in this directory.")
+            args.append(os.path.realpath(most_recent_modified))
+
+        if os.path.exists(args[1]):
+            db[window][ford][int(args[0])] = os.path.realpath(args[1])
+            write_db = True
+        else:
+            eprint(f"File {args[1]} does not exist. Not storing.")
+
+    elif sub_cmd in ["reset-dir", "reset-file"]:
+        db[window][ford][int(args[0])] = ""
+        write_db = True
+
+    elif sub_cmd in ["get-dir", "get-file"]:
+        lookup = db[window][ford][int(args[0])]
+        if lookup == "":
+            eprint(f"Directory {args[0]} is not defined for window '{window}'.")
+        print(lookup)
+
+    elif sub_cmd == "list-windows":
+        print("Windows:")
+        for window_name in sorted(db.keys()):
+            print("  ", window_name)
+
+    elif sub_cmd == "delete-window":
+        # Default to the current window
+        if len(args) == 0:
+            args = [window]
+        for window_name in args:
+            if window_name in db.keys():
+                del db[window_name]
+            else:
+                eprint("The window '{window_name}' is not in the db.", then_exit=False)
+        write_db = True
+
+    elif sub_cmd in ["swap-dirs", "swap-files"]:
+        src, dest = [int(arg) for arg in args]
+        temp = db[window][ford][dest]
+        db[window][ford][dest] = db[window]["dirs"][src]
+        db[window][ford][src] = temp
+        write_db = True
+
+    else:
+        eprint(f"Unrecognized sub-command '{sub_cmd}'.")
+
+    if write_db:
+        with db_file.open(mode="wb") as fh:
+            fh.write(orjson.dumps(db))
+
+
+if __name__ == "__main__":
+    cli()
