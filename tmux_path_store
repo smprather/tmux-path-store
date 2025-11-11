@@ -6,12 +6,12 @@ from pathlib import Path
 
 import orjson
 
+# from peek import peek as p
+
 MIN_PYTHON = (3, 9)
 if sys.version_info < MIN_PYTHON:
     sys.exit("Python %s.%s or later is required.\n" % MIN_PYTHON)
 
-# from peek import peek as p
-#
 # p.color = "yellow"
 # p.color_value = "red"
 
@@ -69,8 +69,8 @@ def cli():
             f"alias cdh='eval $({g_script} cd 0)'; ",
             f"alias shd='{g_script} set-dir 0'; ",
             f"alias sdh='{g_script} set-dir 0'; ",
-            f"alias swd='{g_script} swap-dir'; ",
-            f"alias swf='{g_script} swap-file'; ",
+            f"alias swd='{g_script} swap-dirs'; ",
+            f"alias swf='{g_script} swap-files'; ",
             f"alias tps='{g_script} help'; ",
             "for x in $(seq 0 9); do ",
             f'    alias cd$x="eval \\$({g_script} cd $x)"; ',
@@ -86,7 +86,8 @@ def cli():
         sys.exit()
 
     db_dir = Path(f"{os.environ['HOME']}/.local/state/{g_script}")
-    db_dir.mkdir(parents=True, exist_ok=True)
+    if not db_dir.exists():
+        db_dir.mkdir(parents=True, exist_ok=True)
     db_file = db_dir / "db.json"
     sub_cmd = sys.argv[1]
     if len(sys.argv) > 2:
