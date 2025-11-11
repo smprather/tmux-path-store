@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 
 import orjson
+import rich
+import rich.console
 from rich import print as rprint
 
 # from peek import peek as p
@@ -17,6 +19,7 @@ if sys.version_info < MIN_PYTHON:
 # p.color_value = "red"
 
 g_script = Path(__file__).name
+console = rich.console.Console()
 
 g_help = """
 Alias             Action
@@ -59,7 +62,7 @@ def wprint(msg):
 def print_window_contents(db: dict[str], window_name: str, ford: str):
     rprint(f"Window: {window_name}")
     for i in range(0, 10):
-        print(f"  {i}: {db[window_name][ford][i]}")
+        console.print(f"  {i}: {db[window_name][ford][i]}", soft_wrap=True)
 
 
 def cli():
