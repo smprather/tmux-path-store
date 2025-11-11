@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import orjson
+from rich import print as rprint
 
 # from peek import peek as p
 
@@ -41,21 +42,29 @@ def eprint(msg, then_exit=True, rc=1):
     should go to stderr. Then send a 'false' command for eval by the shell which
     produces an non-zero return code (rc=1).
     """
-    print(f"{g_script}: Error: {msg}", file=sys.stderr)
+    rprint(f"[i]{g_script}[/i]: [bold red]Error[/bold red]: {msg}", file=sys.stderr)
     if then_exit:
         print("false", end="")
         sys.exit(rc)
 
 
+def wprint(msg):
+    """Since we are normally having the stdout eval'd by the shell, error messages
+    should go to stderr. Then send a 'false' command for eval by the shell which
+    produces an non-zero return code (rc=1).
+    """
+    rprint(f"[i]{g_script}[/i]: [bold yellow]Warning[/bold yellow]: {msg}", file=sys.stderr)
+
+
 def print_window_contents(db: dict[str], window_name: str, ford: str):
-    print(f"Window: {window_name}")
+    rprint(f"Window: {window_name}")
     for i in range(0, 10):
         print(f"  {i}: {db[window_name][ford][i]}")
 
 
 def cli():
     if len(sys.argv) < 2 or sys.argv[1] in ["-h", "--help", "help"]:
-        print(g_help)
+        rprint(g_help)
         sys.exit()
 
     if sys.argv[1] == "--bash":
@@ -71,6 +80,7 @@ def cli():
             f"alias sdh='{g_script} set-dir 0'; ",
             f"alias swd='{g_script} swap-dirs'; ",
             f"alias swf='{g_script} swap-files'; ",
+            f'ef() {{ eval $({g_script} edit-files "$@"); }}; ',
             f"alias tps='{g_script} help'; ",
             "for x in $(seq 0 9); do ",
             f'    alias cd$x="eval \\$({g_script} cd $x)"; ',
@@ -78,7 +88,7 @@ def cli():
             f'    alias sf$x="{g_script} set-file $x"; ',
             f'    alias rd$x="{g_script} reset-dir $x"; ',
             f'    alias rf$x="{g_script} reset-file $x"; ',
-            f'    alias f$x="eval \\$({g_script} edit $x)"; ',
+            f'    alias f$x="eval \\$({g_script} edit-file $x)"; ',
             "done",
         ):
             print(alias.lstrip(), end="")
@@ -171,12 +181,22 @@ def cli():
         else:
             print(f"cd {dir_lookup}", end="")
 
-    elif sub_cmd == "edit":
-        dir_lookup = db[window]["files"][int(args[0])]
-        if dir_lookup == "":
+    elif sub_cmd == "edit-file":
+        lookup = db[window]["files"][int(args[0])]
+        if lookup == "":
             eprint(f"File {args[0]} is not defined for window '{window}'.")
         else:
-            print(f"$EDITOR {dir_lookup}", end="")
+            print(f"$EDITOR {lookup}", end="")
+
+    elif sub_cmd == "edit-files":
+        files = []
+        for file_num in [int(x) for x in args]:
+            lookup = db[window]["files"][file_num]
+            if lookup == "":
+                wprint(f"File {args[0]} is not defined for window '{window}'.")
+            else:
+                files.append(lookup)
+        print(f"$EDITOR {' '.join(files)}", end="")
 
     elif sub_cmd in ["list-dirs", "list-files"]:
         if args == ["__all__"]:
@@ -189,7 +209,7 @@ def cli():
                 if window_name in db:
                     print_window_contents(db, window_name, ford)
                 else:
-                    eprint(f"Window {window_name} has not been defined.", then_exit=False)
+                    wprint(f"Window {window_name} has not been defined.")
         else:
             print_window_contents(db, window, ford)
 
@@ -209,6 +229,9 @@ def cli():
             args.append(os.path.realpath(most_recent_modified))
 
         if os.path.exists(args[1]):
+            realpath = Path(args[1]).resolve()
+            if not realpath.is_file():
+                eprint(f"'{args[1]}' (realpath: '{realpath}') is not a file. Not storing.")
             db[window][ford][int(args[0])] = os.path.realpath(args[1])
             write_db = True
         else:
@@ -237,7 +260,7 @@ def cli():
             if window_name in db.keys():
                 del db[window_name]
             else:
-                eprint("The window '{window_name}' is not in the db.", then_exit=False)
+                wprint("The window '{window_name}' is not in the db.")
         write_db = True
 
     elif sub_cmd in ["swap-dirs", "swap-files"]:
