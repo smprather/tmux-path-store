@@ -27,15 +27,15 @@ Alias             Action
 shd, sdh          Set home directory (same as sd0)
 cdh               cd home directory (same as cd0)
 f[0-9]            Edit file # with your $EDITOR
-sd[0-9]           Set directory # to the pwd
+sd[0-9] [dir]     Set directory # to the pwd, or optional dir
 sf[0-9] <file>    Set file # to <file>
 rd[0-9], rf[0-9]  Reset(delete) file/directory
-cd[0-9]           cd to directory #i
+cd[0-9]           cd to directory #
 ld, lf            List directories/files for the current window
 lda, lfa          List directories/files for all windows
 lw                List all windows
 dw [<window>...]  Delete window(s) store. Default: Current window
-swd, swf <#> <#>  Swap dir/file index 1 with index 2
+swd, swf <#> <#>  Swap dir/file index1 with index2
 tps               Print this help
 """.strip()
 
@@ -60,9 +60,9 @@ def wprint(msg):
 
 
 def print_window_contents(db: dict[str], window_name: str, ford: str):
-    rprint(f"Window: {window_name}")
+    rprint(f"[bold][deep_sky_blue4]Window: [dodger_blue1]{window_name}")
     for i in range(0, 10):
-        console.print(f"  {i}: {db[window_name][ford][i]}", soft_wrap=True)
+        console.print(f"{i}: {db[window_name][ford][i]}", soft_wrap=True)
 
 
 def cli():
@@ -218,7 +218,10 @@ def cli():
 
     elif sub_cmd == "set-dir":
         db[window] = db.get(window) or dict(dirs=[""] * 10, files=[""] * 10)
-        db[window][ford][int(args[0])] = os.getcwd()
+        if len(args) > 1:
+            db[window][ford][int(args[0])] = args[1]
+        else:
+            db[window][ford][int(args[0])] = os.getcwd()
         write_db = True
     elif sub_cmd == "set-file":
         db[window] = db.get(window) or dict(dirs=[""] * 10, files=[""] * 10)
