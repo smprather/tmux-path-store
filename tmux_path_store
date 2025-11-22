@@ -70,6 +70,7 @@ def cli():
         rprint(g_help)
         sys.exit()
 
+    # Add "eval $(tmux_path_store --bash)" to your .bashrc to get these aliases
     if sys.argv[1] == "--bash":
         for alias in (
             f"alias ld='{g_script} list-dirs'; ",
