@@ -18,7 +18,7 @@ if sys.version_info < MIN_PYTHON:
 # p.color = "yellow"
 # p.color_value = "red"
 
-g_script = Path(__file__).name
+g_script = Path(sys.argv[0]).stem
 console = rich.console.Console()
 
 g_help = """

@@ -10,13 +10,26 @@ work-products in flight at the same time, each with their own home-base director
 Maybe not as useful for pure software devs that are very "repo-centric". But I'm sure many other engineer and engineer-adjacent (dev-ops, etc) disciplines will
 find this useful.
 
-Enabled by querying the current tmux window name  
+Enabled by querying the current tmux window name
 `tmux display-message -p '#W'"`
 
+# ⛯ Installation
+Requires [uv](https://docs.astral.sh/uv/):
+```bash
+uv tool install tmux-path-store
+```
+Or install from a local clone:
+```bash
+git clone https://github.com/<owner>/tmux-path-store.git
+uv tool install ./tmux-path-store
+```
+Then add this line to your `~/.bashrc`:
+```bash
+eval $(tmux_path_store --bash)
+```
+
 # ⛯ Aliases
-### Add this to your `.bashrc`
-`eval $(tmux_path_store --bash)`
-### Which will creates these aliases
+### Which creates these aliases
 | Alias             | Action                                          |
 | ----------------- | ----------------------------------------------- |
 | shd, sdh          | Set home directory (same as sd0)                |

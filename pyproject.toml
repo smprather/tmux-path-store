@@ -4,7 +4,10 @@ version = "1.0.0"
 description = "Uses the Tmux window name as an index into a list of stored directory paths and files."
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = ["orjson", "rich"]
+
+[project.scripts]
+tmux_path_store = "tmux_path_store:cli"
 
 [tool.ruff]
 line-length = 110
