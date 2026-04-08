@@ -59,7 +59,7 @@ def wprint(msg):
     rprint(f"[i]{g_script}[/i]: [bold yellow]Warning[/bold yellow]: {msg}", file=sys.stderr)
 
 
-def print_window_contents(db: dict[str], window_name: str, ford: str):
+def print_window_contents(db: dict[str, dict[str, list[str]]], window_name: str, ford: str):
     rprint(f"[bold][deep_sky_blue4]Window: [dodger_blue1]{window_name}")
     for i in range(0, 10):
         console.print(f"{i}: {db[window_name][ford][i]}", soft_wrap=True)
@@ -158,6 +158,7 @@ def cli():
                 "Try pgrep -u $USER -a tmux."
             )
 
+    assert window
     if db_file.exists():
         with db_file.open(mode="rb") as fh:
             db = orjson.loads(fh.read())
@@ -267,13 +268,13 @@ def cli():
             if window_name in db.keys():
                 del db[window_name]
             else:
-                wprint("The window '{window_name}' is not in the db.")
+                wprint(f"The window '{window_name}' is not in the db.")
         write_db = True
 
     elif sub_cmd in ["swap-dirs", "swap-files"]:
         src, dest = [int(arg) for arg in args]
         temp = db[window][ford][dest]
-        db[window][ford][dest] = db[window]["dirs"][src]
+        db[window][ford][dest] = db[window][ford][src]
         db[window][ford][src] = temp
         write_db = True
 

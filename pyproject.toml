@@ -12,3 +12,9 @@ tmux_path_store = "tmux_path_store:cli"
 [tool.ruff]
 line-length = 110
 target-version = "py314"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.9",
+    "ty>=0.0.29",
+]
