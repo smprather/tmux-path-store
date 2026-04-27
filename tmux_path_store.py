@@ -117,35 +117,41 @@ def cli():
         ford = ""
 
     if not (window := os.getenv("TMUX_WINDOW")):
-        user = os.environ["USER"]
-        tmux_server_binary_holder_file = Path(f"/tmp/{g_script}_server_binary.{user}")
+        if os.getenv("TMUX"):
+            # Already inside a tmux session; use tmux from PATH (avoids stale binary cache issues)
+            tmux_cmd = "tmux"
+        else:
+            user = os.environ["USER"]
+            tmux_server_binary_holder_file = Path(f"/tmp/{g_script}_server_binary.{user}")
 
-        tmux_server_binary = None
-        if tmux_server_binary_holder_file.exists():
-            tmux_server_binary = Path(tmux_server_binary_holder_file.read_text())
-            if not tmux_server_binary.exists():
-                tmux_server_binary_holder_file.unlink(missing_ok=True)
-                tmux_server_binary = None
+            tmux_server_binary = None
+            if tmux_server_binary_holder_file.exists():
+                tmux_server_binary = Path(tmux_server_binary_holder_file.read_text())
+                if not tmux_server_binary.exists():
+                    tmux_server_binary_holder_file.unlink(missing_ok=True)
+                    tmux_server_binary = None
 
-        if tmux_server_binary is None:
-            try:
-                tmux_server_binary = Path(
-                    "/proc/"
-                    + subprocess.run(
-                        ["/usr/bin/pgrep", "-f", "-u", user, "tmux$"],
-                        capture_output=True,
-                        text=True,
-                    ).stdout.split()[0]
-                    + "/exe"
-                ).resolve()
-                tmux_server_binary_holder_file.write_text(str(tmux_server_binary))
-            except IndexError:
-                eprint("We do not appear to be in a tmux session.")
+            if tmux_server_binary is None:
+                try:
+                    tmux_server_binary = Path(
+                        "/proc/"
+                        + subprocess.run(
+                            ["/usr/bin/pgrep", "-f", "-u", user, "tmux$"],
+                            capture_output=True,
+                            text=True,
+                        ).stdout.split()[0]
+                        + "/exe"
+                    ).resolve()
+                    tmux_server_binary_holder_file.write_text(str(tmux_server_binary))
+                except IndexError:
+                    eprint("We do not appear to be in a tmux session.")
+
+            tmux_cmd = str(tmux_server_binary)
 
         try:
             window = (
                 subprocess.check_output(
-                    f"{tmux_server_binary} display-message -p '#W'",
+                    f"{tmux_cmd} display-message -p '#W'",
                     shell=True,
                 )
                 .decode("utf-8")
