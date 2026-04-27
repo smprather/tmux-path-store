@@ -17,6 +17,10 @@ The entire tool is a single executable Python script `tmux_path_store` (no `.py`
 - **No test suite or build step** — run directly: `./tmux_path_store <sub-command>`
 - **No package manager lock file** — deps are not pinned
 
+## Memory Files
+
+Before committing, update `~/.claude/projects/-home-ctr-mprather-dev-tmux-path-store/memory/` to reflect any behavioral or architectural changes. The memory files are the cold-start context for future agents — keep them in sync so agents don't operate on stale assumptions.
+
 ## Key Conventions
 
 - stdout is reserved for shell-eval output; all user-facing messages use stderr via rich
