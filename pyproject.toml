@@ -6,6 +6,9 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = ["orjson", "rich"]
 
+[tool.uv]
+package = true
+
 [project.scripts]
 tmux_path_store = "tmux_path_store:cli"
 

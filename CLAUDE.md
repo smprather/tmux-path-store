@@ -15,7 +15,7 @@ The entire tool is a single executable Python script `tmux_path_store` (no `.py`
 - **Python**: >=3.14, runtime deps: `orjson`, `rich`
 - **Linting**: `ruff` (line-length=110, target py314)
 - **No test suite or build step** — run directly: `./tmux_path_store <sub-command>`
-- **No package manager lock file** — deps are not pinned
+- **Lock file**: `uv.lock` is committed — deps are pinned for reproducible installs
 
 ## Memory Files
 
