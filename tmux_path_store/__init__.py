@@ -5,9 +5,12 @@ import sys
 from pathlib import Path
 
 import orjson
-import rich
-import rich.console
+from rich import box
 from rich import print as rprint
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
 
 # from peek import peek as p
 
@@ -19,25 +22,23 @@ if sys.version_info < MIN_PYTHON:
 # p.color_value = "red"
 
 g_script = Path(sys.argv[0]).stem
-console = rich.console.Console()
+console = Console()
 
-g_help = """
-Alias             Action
-==================================================================
-shd, sdh          Set home directory (same as sd0)
-cdh               cd home directory (same as cd0)
-f[0-9]            Edit file # with your $EDITOR
-sd[0-9] [dir]     Set directory # to the pwd, or optional dir
-sf[0-9] <file>    Set file # to <file>
-rd[0-9], rf[0-9]  Reset(delete) file/directory
-cd[0-9]           cd to directory #
-ld, lf            List directories/files for the current window
-lda, lfa          List directories/files for all windows
-lw                List all windows
-dw [<window>...]  Delete window(s) store. Default: Current window
-swd, swf <#> <#>  Swap dir/file index1 with index2
-tps               Print this help
-""".strip()
+g_help_rows = (
+    ("Navigate", "cdh", "cd home directory (same as cd0)"),
+    ("Navigate", "cd[0-9]", "cd to directory #"),
+    ("Navigate", "f[0-9]", "Edit file # with $EDITOR"),
+    ("Store", "shd, sdh", "Set home directory (same as sd0)"),
+    ("Store", "sd[0-9] [dir]", "Set directory # to pwd, or optional dir"),
+    ("Store", "sf[0-9] <file>", "Set file # to <file>"),
+    ("Inspect", "ld, lf", "List directories/files for current window"),
+    ("Inspect", "lda, lfa", "List directories/files for all windows"),
+    ("Inspect", "lw", "List all windows"),
+    ("Manage", "rd[0-9], rf[0-9]", "Reset file/directory #"),
+    ("Manage", "dw [<window>...]", "Delete window store. Defaults to current window"),
+    ("Manage", "swd, swf <#> <#>", "Swap dir/file index1 with index2"),
+    ("Help", "tps", "Print this help"),
+)
 
 
 def eprint(msg, then_exit=True, rc=1):
@@ -65,9 +66,35 @@ def print_window_contents(db: dict[str, dict[str, list[str]]], window_name: str,
         console.print(f"{i}: {db[window_name][ford][i]}", soft_wrap=True)
 
 
+def print_help():
+    table = Table(
+        box=box.SIMPLE_HEAVY,
+        border_style="bright_black",
+        header_style="bold white",
+        pad_edge=False,
+        show_edge=False,
+    )
+    table.add_column("Mode", style="bold deep_sky_blue4", no_wrap=True)
+    table.add_column("Alias", style="bold dodger_blue1", no_wrap=True)
+    table.add_column("Action", style="white")
+
+    for mode, alias, action in g_help_rows:
+        table.add_row(mode, Text(alias, style="bold cyan"), action)
+
+    console.print(
+        Panel(
+            table,
+            title=Text("tmux-path-store aliases", style="bold dodger_blue1"),
+            subtitle=Text("eval $(tmux_path_store --bash)", style="dim"),
+            border_style="deep_sky_blue4",
+            padding=(1, 2),
+        )
+    )
+
+
 def cli():
     if len(sys.argv) < 2 or sys.argv[1] in ["-h", "--help", "help"]:
-        console.print(g_help, markup=False)
+        print_help()
         sys.exit()
 
     # Add "eval $(tmux_path_store --bash)" to your .bashrc to get these aliases
