@@ -8,13 +8,14 @@ tmux-path-store is a single-file Python CLI tool (`tmux_path_store`) that uses t
 
 ## Architecture
 
-The entire tool is a single executable Python script `tmux_path_store` (no `.py` extension) with a `cli()` entry point. It outputs shell commands to stdout for `eval` by the calling shell (e.g., `cd /some/path`), so errors/warnings go to stderr via `eprint()`/`wprint()`. The `--bash` flag generates alias definitions. The db is a dict keyed by window name, each containing `dirs` and `files` arrays of 10 strings.
+The entire tool lives in the `tmux_path_store` package with a `cli()` entry point exported as the `tmux_path_store` console script. It outputs shell commands to stdout for `eval` by the calling shell (e.g., `cd /some/path`), so errors/warnings go to stderr via `eprint()`/`wprint()`. The `--bash` flag generates alias definitions. The db is a dict keyed by window name, each containing `dirs` and `files` arrays of 10 strings.
 
 ## Development
 
 - **Python**: >=3.14, runtime deps: `orjson`, `rich`
 - **Linting**: `ruff` (line-length=110, target py314)
-- **No test suite or build step** — run directly: `./tmux_path_store <sub-command>`
+- **No test suite** — run via uv: `uv run tmux_path_store <sub-command>`
+- **Packaging**: `uv tool install .`
 - **Lock file**: `uv.lock` is committed — deps are pinned for reproducible installs
 
 ## Memory Files

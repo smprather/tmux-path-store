@@ -21,7 +21,8 @@ uv tool install tmux-path-store
 Or install from a local clone:
 ```bash
 git clone https://github.com/<owner>/tmux-path-store.git
-uv tool install ./tmux-path-store
+cd tmux-path-store
+uv tool install .
 ```
 Then add this line to your `~/.bashrc`:
 ```bash

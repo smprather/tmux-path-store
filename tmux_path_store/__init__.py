@@ -67,7 +67,7 @@ def print_window_contents(db: dict[str, dict[str, list[str]]], window_name: str,
 
 def cli():
     if len(sys.argv) < 2 or sys.argv[1] in ["-h", "--help", "help"]:
-        rprint(g_help)
+        console.print(g_help, markup=False)
         sys.exit()
 
     # Add "eval $(tmux_path_store --bash)" to your .bashrc to get these aliases
