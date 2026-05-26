@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
+import json
 import os
 import subprocess
 import sys
 from importlib.metadata import version
 from pathlib import Path
 
-import orjson
 from rich import box
 from rich import print as rprint
 from rich.console import Console
@@ -199,8 +199,8 @@ def cli():
 
     assert window
     if db_file.exists():
-        with db_file.open(mode="rb") as fh:
-            db = orjson.loads(fh.read())
+        with db_file.open(encoding="utf-8") as fh:
+            db = json.load(fh)
     else:
         db = dict()
 
@@ -321,8 +321,8 @@ def cli():
         eprint(f"Unrecognized sub-command '{sub_cmd}'.")
 
     if write_db:
-        with db_file.open(mode="wb") as fh:
-            fh.write(orjson.dumps(db))
+        with db_file.open(mode="w", encoding="utf-8") as fh:
+            json.dump(db, fh, separators=(",", ":"))
 
 
 if __name__ == "__main__":
