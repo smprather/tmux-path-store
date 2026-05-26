@@ -2,6 +2,7 @@
 import os
 import subprocess
 import sys
+from importlib.metadata import version
 from pathlib import Path
 
 import orjson
@@ -21,6 +22,7 @@ if sys.version_info < MIN_PYTHON:
 # p.color = "yellow"
 # p.color_value = "red"
 
+DISTRIBUTION_NAME = "tmux-path-store"
 g_script = Path(sys.argv[0]).stem
 console = Console()
 
@@ -95,6 +97,10 @@ def print_help():
 def cli():
     if len(sys.argv) < 2 or sys.argv[1] in ["-h", "--help", "help"]:
         print_help()
+        sys.exit()
+
+    if sys.argv[1] in ["--version", "version"]:
+        print(f"{DISTRIBUTION_NAME} {version(DISTRIBUTION_NAME)}")
         sys.exit()
 
     # Add "eval $(tmux_path_store --bash)" to your .bashrc to get these aliases
