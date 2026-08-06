@@ -26,7 +26,7 @@ uv tool install .
 ```
 Then add this line to your `~/.bashrc`:
 ```bash
-eval $(tmux_path_store --bash)
+eval $(tmux-path-store --bash)
 ```
 
 # ⛯ Aliases
@@ -55,14 +55,14 @@ eval $(tmux_path_store --bash)
 ### Closest thing to a home-dir for this project
 $ cd /proj/collect_underpants/users/binklin
 
-### "Set Home Directory", alias for 'tmux_path_store set-dir 0'
+### "Set Home Directory", alias for 'tmux-path-store set-dir 0'
 $ shd
 
 ### cd off into oblivion doing whatever...
 $ cd /garden; do-day-job; cd /forest; pick-magic-shrooms; etc...
 
 ### Ok, time to get back to world-domination
-### "cd Home", alias cdh='eval $(tmux_path_store cd 0)'; 
+### "cd Home", alias cdh='eval $(tmux-path-store cd 0)';
 $ cdh
 $ pwd
 /proj/collect_underpants/users/binklin
@@ -79,7 +79,7 @@ $ phase2-sync-meeting
 $ cd1
 $ procure-underpants
 
-### List directories, alias ld='tmux_path_store list-dirs'
+### List directories, alias ld='tmux-path-store list-dirs'
 $ ld
 Window: phase1
   0: /proj/collect_underpants/users/binklin

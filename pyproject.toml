@@ -12,7 +12,7 @@ dependencies = ["rich"]
 package = true
 
 [project.scripts]
-tmux_path_store = "tmux_path_store:cli"
+tmux-path-store = "tmux_path_store:cli"
 
 [tool.uv.build-backend]
 module-root = ""

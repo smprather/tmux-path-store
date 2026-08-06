@@ -4,17 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-tmux-path-store is a single-file Python CLI tool (`tmux_path_store`) that uses tmux window names as keys to store/retrieve directory paths and file paths. It stores data in `~/.local/state/tmux_path_store/db.json` using Python's built-in json module. Users add `eval $(tmux_path_store --bash)` to `.bashrc` to get shell aliases (cd0-cd9, sd0-sd9, sf0-sf9, cdh, shd, ld, lf, etc.).
+tmux-path-store is a single-file Python CLI tool (`tmux-path-store`) that uses tmux window names as keys to store/retrieve directory paths and file paths. It stores data in `~/.local/state/tmux_path_store/db.json` using Python's built-in json module. Users add `eval $(tmux-path-store --bash)` to `.bashrc` to get shell aliases (cd0-cd9, sd0-sd9, sf0-sf9, cdh, shd, ld, lf, etc.).
 
 ## Architecture
 
-The entire tool lives in the `tmux_path_store` package with a `cli()` entry point exported as the `tmux_path_store` console script. It outputs shell commands to stdout for `eval` by the calling shell (e.g., `cd /some/path`), so errors/warnings go to stderr via `eprint()`/`wprint()`. The `--bash` flag generates alias definitions. The db is a dict keyed by window name, each containing `dirs` and `files` arrays of 10 strings.
+The entire tool lives in the `tmux_path_store` package with a `cli()` entry point exported as the `tmux-path-store` console script. It outputs shell commands to stdout for `eval` by the calling shell (e.g., `cd /some/path`), so errors/warnings go to stderr via `eprint()`/`wprint()`. The `--bash` flag generates alias definitions. The db is a dict keyed by window name, each containing `dirs` and `files` arrays of 10 strings.
 
 ## Development
 
 - **Python**: >=3.14, runtime deps: `rich`
 - **Linting**: `ruff` (line-length=110, target py314)
-- **No test suite** — run via uv: `uv run tmux_path_store <sub-command>`
+- **No test suite** — run via uv: `uv run tmux-path-store <sub-command>`
 - **Packaging**: `uv tool install .`
 - **Lock file**: `uv.lock` is committed — deps are pinned for reproducible installs
 

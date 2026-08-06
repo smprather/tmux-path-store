@@ -23,6 +23,7 @@ if sys.version_info < MIN_PYTHON:
 # p.color_value = "red"
 
 DISTRIBUTION_NAME = "tmux-path-store"
+STATE_DIR_NAME = "tmux_path_store"
 g_script = Path(sys.argv[0]).stem
 console = Console()
 
@@ -87,7 +88,7 @@ def print_help():
         Panel(
             table,
             title=Text("tmux-path-store aliases", style="bold dodger_blue1"),
-            subtitle=Text("eval $(tmux_path_store --bash)", style="dim"),
+            subtitle=Text("eval $(tmux-path-store --bash)", style="dim"),
             border_style="deep_sky_blue4",
             padding=(1, 2),
         )
@@ -103,7 +104,7 @@ def cli():
         print(f"{DISTRIBUTION_NAME} {version(DISTRIBUTION_NAME)}")
         sys.exit()
 
-    # Add "eval $(tmux_path_store --bash)" to your .bashrc to get these aliases
+    # Add "eval $(tmux-path-store --bash)" to your .bashrc to get these aliases
     if sys.argv[1] == "--bash":
         for alias in (
             f"alias ld='{g_script} list-dirs'; ",
@@ -132,7 +133,7 @@ def cli():
         print("")
         sys.exit()
 
-    db_dir = Path(f"{os.environ['HOME']}/.local/state/{g_script}")
+    db_dir = Path(f"{os.environ['HOME']}/.local/state/{STATE_DIR_NAME}")
     if not db_dir.exists():
         db_dir.mkdir(parents=True, exist_ok=True)
     db_file = db_dir / "db.json"
