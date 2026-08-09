@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import shlex
 import subprocess
 import sys
 from importlib.metadata import version
@@ -88,11 +89,82 @@ def print_help():
         Panel(
             table,
             title=Text("tmux-path-store aliases", style="bold dodger_blue1"),
-            subtitle=Text("eval $(tmux-path-store --bash)", style="dim"),
+            subtitle=Text("eval $(tmux-path-store --bash|--zsh)  |  eval `tmux-path-store --csh`", style="dim"),
             border_style="deep_sky_blue4",
             padding=(1, 2),
         )
     )
+
+
+def shell_words(*words: str) -> str:
+    return " ".join(shlex.quote(word) for word in words)
+
+
+def print_posix_aliases(shell: str):
+    commands = [
+        f"alias ld='{g_script} list-dirs';",
+        f"alias lf='{g_script} list-files';",
+        f"alias lda='{g_script} list-dirs __all__';",
+        f"alias lfa='{g_script} list-files __all__';",
+        f"alias lw='{g_script} list-windows';",
+        f"alias dw='{g_script} delete-window';",
+        f"alias cdh='eval $({g_script} cd 0)';",
+        f"alias shd='{g_script} set-dir 0';",
+        f"alias sdh='{g_script} set-dir 0';",
+        f"alias swd='{g_script} swap-dirs';",
+        f"alias swf='{g_script} swap-files';",
+        f'ef() {{ eval "$({g_script} edit-files "$@")"; }};',
+        f"alias tps='{g_script} help';",
+    ]
+
+    for i in range(10):
+        commands.extend(
+            [
+                f"alias cd{i}='eval $({g_script} cd {i})';",
+                f"alias sd{i}='{g_script} set-dir {i}';",
+                f"alias sf{i}='{g_script} set-file {i}';",
+                f"alias rd{i}='{g_script} reset-dir {i}';",
+                f"alias rf{i}='{g_script} reset-file {i}';",
+                f"alias f{i}='eval $({g_script} edit-file {i})';",
+            ]
+        )
+
+    if shell == "zsh":
+        commands.append(f"compdef _gnu_generic {g_script}=tmux-path-store 2>/dev/null || true;")
+
+    print(" ".join(commands))
+
+
+def print_csh_aliases():
+    commands = [
+        f"alias ld '{g_script} list-dirs'",
+        f"alias lf '{g_script} list-files'",
+        f"alias lda '{g_script} list-dirs __all__'",
+        f"alias lfa '{g_script} list-files __all__'",
+        f"alias lw '{g_script} list-windows'",
+        f"alias dw '{g_script} delete-window'",
+        f"alias cdh 'eval `{g_script} cd 0`'",
+        f"alias shd '{g_script} set-dir 0'",
+        f"alias sdh '{g_script} set-dir 0'",
+        f"alias swd '{g_script} swap-dirs'",
+        f"alias swf '{g_script} swap-files'",
+        f"alias ef 'eval `{g_script} edit-files \\!*`'",
+        f"alias tps '{g_script} help'",
+    ]
+
+    for i in range(10):
+        commands.extend(
+            [
+                f"alias cd{i} 'eval `{g_script} cd {i}`'",
+                f"alias sd{i} '{g_script} set-dir {i}'",
+                f"alias sf{i} '{g_script} set-file {i}'",
+                f"alias rd{i} '{g_script} reset-dir {i}'",
+                f"alias rf{i} '{g_script} reset-file {i}'",
+                f"alias f{i} 'eval `{g_script} edit-file {i}`'",
+            ]
+        )
+
+    print("; ".join(commands))
 
 
 def cli():
@@ -104,33 +176,17 @@ def cli():
         print(f"{DISTRIBUTION_NAME} {version(DISTRIBUTION_NAME)}")
         sys.exit()
 
-    # Add "eval $(tmux-path-store --bash)" to your .bashrc to get these aliases
+    # Add the matching eval line to your shell startup file to get these aliases.
     if sys.argv[1] == "--bash":
-        for alias in (
-            f"alias ld='{g_script} list-dirs'; ",
-            f"alias lf='{g_script} list-files'; ",
-            f"alias lda='{g_script} list-dirs __all__'; ",
-            f"alias lfa='{g_script} list-files __all__'; ",
-            f"alias lw='{g_script} list-windows'; ",
-            f"alias dw='{g_script} delete-window'; ",
-            f"alias cdh='eval $({g_script} cd 0)'; ",
-            f"alias shd='{g_script} set-dir 0'; ",
-            f"alias sdh='{g_script} set-dir 0'; ",
-            f"alias swd='{g_script} swap-dirs'; ",
-            f"alias swf='{g_script} swap-files'; ",
-            f'ef() {{ eval $({g_script} edit-files "$@"); }}; ',
-            f"alias tps='{g_script} help'; ",
-            "for x in $(seq 0 9); do ",
-            f'    alias cd$x="eval \\$({g_script} cd $x)"; ',
-            f'    alias sd$x="{g_script} set-dir $x"; ',
-            f'    alias sf$x="{g_script} set-file $x"; ',
-            f'    alias rd$x="{g_script} reset-dir $x"; ',
-            f'    alias rf$x="{g_script} reset-file $x"; ',
-            f'    alias f$x="eval \\$({g_script} edit-file $x)"; ',
-            "done",
-        ):
-            print(alias.lstrip(), end="")
-        print("")
+        print_posix_aliases("bash")
+        sys.exit()
+
+    if sys.argv[1] == "--zsh":
+        print_posix_aliases("zsh")
+        sys.exit()
+
+    if sys.argv[1] in ["--csh", "--tcsh"]:
+        print_csh_aliases()
         sys.exit()
 
     db_dir = Path(f"{os.environ['HOME']}/.local/state/{STATE_DIR_NAME}")
@@ -224,14 +280,14 @@ def cli():
         if dir_lookup == "":
             eprint(f"Directory {args[0]} is not defined for window '{window}'.")
         else:
-            print(f"cd {dir_lookup}", end="")
+            print(shell_words("cd", dir_lookup), end="")
 
     elif sub_cmd == "edit-file":
         lookup = db[window]["files"][int(args[0])]
         if lookup == "":
             eprint(f"File {args[0]} is not defined for window '{window}'.")
         else:
-            print(f"$EDITOR {lookup}", end="")
+            print(f"$EDITOR {shlex.quote(lookup)}", end="")
 
     elif sub_cmd == "edit-files":
         files = []
@@ -241,7 +297,7 @@ def cli():
                 wprint(f"File {args[0]} is not defined for window '{window}'.")
             else:
                 files.append(lookup)
-        print(f"$EDITOR {' '.join(files)}", end="")
+        print("$EDITOR " + " ".join(shlex.quote(file) for file in files), end="")
 
     elif sub_cmd in ["list-dirs", "list-files"]:
         if args == ["__all__"]:

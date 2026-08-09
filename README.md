@@ -24,10 +24,18 @@ git clone https://github.com/<owner>/tmux-path-store.git
 cd tmux-path-store
 uv tool install .
 ```
-Then add this line to your `~/.bashrc`:
+Then add the line for your shell startup file:
 ```bash
 eval $(tmux-path-store --bash)
 ```
+```zsh
+eval "$(tmux-path-store --zsh)"
+```
+```csh
+eval `tmux-path-store --csh`
+```
+
+The `--csh` output is compatible with both csh and tcsh. `--tcsh` is also accepted as an alias.
 
 # ⛯ Aliases
 ### Which creates these aliases
