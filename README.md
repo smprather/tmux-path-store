@@ -24,6 +24,10 @@ git clone https://github.com/<owner>/tmux-path-store.git
 cd tmux-path-store
 uv tool install .
 ```
+That local install also works offline:
+```bash
+uv tool install --offline .
+```
 Then add the line for your shell startup file:
 ```bash
 eval $(tmux-path-store --bash)

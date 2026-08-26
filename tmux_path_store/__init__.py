@@ -7,13 +7,6 @@ import sys
 from importlib.metadata import version
 from pathlib import Path
 
-from rich import box
-from rich import print as rprint
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
-from rich.text import Text
-
 # from peek import peek as p
 
 MIN_PYTHON = (3, 9)
@@ -26,7 +19,6 @@ if sys.version_info < MIN_PYTHON:
 DISTRIBUTION_NAME = "tmux-path-store"
 STATE_DIR_NAME = "tmux_path_store"
 g_script = Path(sys.argv[0]).stem
-console = Console()
 
 g_help_rows = (
     ("Navigate", "cdh", "cd home directory (same as cd0)"),
@@ -50,7 +42,7 @@ def eprint(msg, then_exit=True, rc=1):
     should go to stderr. Then send a 'false' command for eval by the shell which
     produces an non-zero return code (rc=1).
     """
-    rprint(f"[i]{g_script}[/i]: [bold red]Error[/bold red]: {msg}", file=sys.stderr)
+    print(f"{g_script}: Error: {msg}", file=sys.stderr)
     if then_exit:
         print("false", end="")
         sys.exit(rc)
@@ -61,39 +53,27 @@ def wprint(msg):
     should go to stderr. Then send a 'false' command for eval by the shell which
     produces an non-zero return code (rc=1).
     """
-    rprint(f"[i]{g_script}[/i]: [bold yellow]Warning[/bold yellow]: {msg}", file=sys.stderr)
+    print(f"{g_script}: Warning: {msg}", file=sys.stderr)
 
 
 def print_window_contents(db: dict[str, dict[str, list[str]]], window_name: str, ford: str):
-    rprint(f"[bold][deep_sky_blue4]Window: [dodger_blue1]{window_name}")
+    print(f"Window: {window_name}")
     for i in range(10):
-        console.print(f"{i}: {db[window_name][ford][i]}", soft_wrap=True)
+        print(f"  {i}: {db[window_name][ford][i]}")
 
 
 def print_help():
-    table = Table(
-        box=box.SIMPLE_HEAVY,
-        border_style="bright_black",
-        header_style="bold white",
-        pad_edge=False,
-        show_edge=False,
-    )
-    table.add_column("Mode", style="bold deep_sky_blue4", no_wrap=True)
-    table.add_column("Alias", style="bold dodger_blue1", no_wrap=True)
-    table.add_column("Action", style="white")
+    mode_width = max(len("Mode"), *(len(mode) for mode, _, _ in g_help_rows))
+    alias_width = max(len("Alias"), *(len(alias) for _, alias, _ in g_help_rows))
 
+    print("tmux-path-store aliases")
+    print()
+    print(f"{'Mode'.ljust(mode_width)}  {'Alias'.ljust(alias_width)}  Action")
+    print(f"{'-' * mode_width}  {'-' * alias_width}  ------")
     for mode, alias, action in g_help_rows:
-        table.add_row(mode, Text(alias, style="bold cyan"), action)
-
-    console.print(
-        Panel(
-            table,
-            title=Text("tmux-path-store aliases", style="bold dodger_blue1"),
-            subtitle=Text("eval $(tmux-path-store --bash|--zsh)  |  eval `tmux-path-store --csh`", style="dim"),
-            border_style="deep_sky_blue4",
-            padding=(1, 2),
-        )
-    )
+        print(f"{mode.ljust(mode_width)}  {alias.ljust(alias_width)}  {action}")
+    print()
+    print("eval $(tmux-path-store --bash|--zsh)  |  eval `tmux-path-store --csh`")
 
 
 def shell_words(*words: str) -> str:
