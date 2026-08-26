@@ -12,10 +12,10 @@ The entire tool lives in the `tmux_path_store` package with a `cli()` entry poin
 
 ## Development
 
-- **Python**: >=3.14, runtime deps: `rich`
+- **Python**: >=3.14, runtime deps: none
 - **Linting**: `ruff` (line-length=110, target py314)
-- **No test suite** — run via uv: `uv run tmux-path-store <sub-command>`
-- **Packaging**: `uv tool install .`
+- **Tests**: `python -m unittest discover -s tests -p 'test_*.py'` and `ruff check tmux_path_store tests`
+- **Packaging**: `uv tool install .` or `uv tool install --offline .`
 - **Lock file**: `uv.lock` is committed — deps are pinned for reproducible installs
 
 ## Memory Files
@@ -24,6 +24,7 @@ Before committing, update `~/.claude/projects/-home-ctr-mprather-dev-tmux-path-s
 
 ## Key Conventions
 
-- stdout is reserved for shell-eval output; all user-facing messages use stderr via rich
+- stdout is reserved for shell-eval output; all user-facing messages use stderr via stdlib printing
 - `eprint()` prints error to stderr and outputs `false` to stdout (so eval produces non-zero rc)
 - `ford` variable means "files or dirs" — used throughout to index into the db
+- Releases use CalVer tags of the form `vYYYY.M.D`
