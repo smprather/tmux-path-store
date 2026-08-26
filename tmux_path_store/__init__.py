@@ -18,7 +18,7 @@ from rich.text import Text
 
 MIN_PYTHON = (3, 9)
 if sys.version_info < MIN_PYTHON:
-    sys.exit("Python %s.%s or later is required.\n" % MIN_PYTHON)
+    sys.exit(f"Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]} or later is required.\n")
 
 # p.color = "yellow"
 # p.color_value = "red"
@@ -66,7 +66,7 @@ def wprint(msg):
 
 def print_window_contents(db: dict[str, dict[str, list[str]]], window_name: str, ford: str):
     rprint(f"[bold][deep_sky_blue4]Window: [dodger_blue1]{window_name}")
-    for i in range(0, 10):
+    for i in range(10):
         console.print(f"{i}: {db[window_name][ford][i]}", soft_wrap=True)
 
 
@@ -98,6 +98,11 @@ def print_help():
 
 def shell_words(*words: str) -> str:
     return " ".join(shlex.quote(word) for word in words)
+
+
+def tmux_server_binary_holder_path() -> Path:
+    tmp_dir = Path(os.environ.get("TMPDIR") or "/tmp")
+    return tmp_dir / f"{g_script}_server_binary.{os.environ['USER']}"
 
 
 def print_posix_aliases(shell: str):
@@ -212,7 +217,7 @@ def cli():
             tmux_cmd = "tmux"
         else:
             user = os.environ["USER"]
-            tmux_server_binary_holder_file = Path(f"/tmp/{g_script}_server_binary.{user}")
+            tmux_server_binary_holder_file = tmux_server_binary_holder_path()
 
             tmux_server_binary = None
             if tmux_server_binary_holder_file.exists():
@@ -227,6 +232,7 @@ def cli():
                         "/proc/"
                         + subprocess.run(
                             ["/usr/bin/pgrep", "-f", "-u", user, "tmux$"],
+                            check=False,
                             capture_output=True,
                             text=True,
                         ).stdout.split()[0]
@@ -259,19 +265,13 @@ def cli():
         with db_file.open(encoding="utf-8") as fh:
             db = json.load(fh)
     else:
-        db = dict()
+        db = {}
 
-    if sub_cmd not in [
-        "set-dir",
-        "set-file",
-        "list-windows",
-        "list-all-windows",
-    ]:
-        if window not in db:
-            eprint(
-                f"Window {window} is not in the db. Use set-dir/set-file to init this window.\n"
-                "You should have shd/sd/sf aliases to these sub-commands."
-            )
+    if sub_cmd not in ["set-dir", "set-file", "list-windows", "list-all-windows"] and window not in db:
+        eprint(
+            f"Window {window} is not in the db. Use set-dir/set-file to init this window.\n"
+            "You should have shd/sd/sf aliases to these sub-commands."
+        )
 
     write_db = False
 
@@ -315,14 +315,14 @@ def cli():
             print_window_contents(db, window, ford)
 
     elif sub_cmd == "set-dir":
-        db[window] = db.get(window) or dict(dirs=[""] * 10, files=[""] * 10)
+        db[window] = db.get(window) or {"dirs": [""] * 10, "files": [""] * 10}
         if len(args) > 1:
             db[window][ford][int(args[0])] = args[1]
         else:
             db[window][ford][int(args[0])] = os.getcwd()
         write_db = True
     elif sub_cmd == "set-file":
-        db[window] = db.get(window) or dict(dirs=[""] * 10, files=[""] * 10)
+        db[window] = db.get(window) or {"dirs": [""] * 10, "files": [""] * 10}
         # If no file is given, default to the most recently modified
         if len(args) == 1:
             most_recent_modified = subprocess.getoutput(
@@ -361,7 +361,7 @@ def cli():
         if len(args) == 0:
             args = [window]
         for window_name in args:
-            if window_name in db.keys():
+            if window_name in db:
                 del db[window_name]
             else:
                 wprint(f"The window '{window_name}' is not in the db.")
