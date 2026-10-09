@@ -1,6 +1,6 @@
 [project]
 name = "tmux-path-store"
-version = "2026.8.26"
+version = "2026.10.1"
 description = "Uses the Tmux window name as an index into a list of stored directory paths and files."
 readme = "README.md"
 license = "MIT"

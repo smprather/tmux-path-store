@@ -29,7 +29,7 @@ wheels = [
 
 [[package]]
 name = "tmux-path-store"
-version = "2026.8.26"
+version = "2026.10.1"
 source = { editable = "." }
 
 [package.dev-dependencies]

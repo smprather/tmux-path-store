@@ -10,17 +10,17 @@ work-products in flight at the same time, each with their own home-base director
 Maybe not as useful for pure software devs that are very "repo-centric". But I'm sure many other engineer and engineer-adjacent (dev-ops, etc) disciplines will
 find this useful.
 
-Enabled by querying the current tmux window name
-`tmux display-message -p '#W'"`
+Enabled by querying the current tmux window name:
+```bash
+tmux display-message -p '#W'
+```
 
 # ⛯ Installation
-Requires [uv](https://docs.astral.sh/uv/):
+Requires [uv](https://docs.astral.sh/uv/).
+
+Not published on PyPI yet, so install from a clone:
 ```bash
-uv tool install tmux-path-store
-```
-Or install from a local clone:
-```bash
-git clone https://github.com/<owner>/tmux-path-store.git
+git clone https://github.com/smprather/tmux-path-store.git
 cd tmux-path-store
 uv tool install .
 ```
@@ -28,6 +28,8 @@ That local install also works offline:
 ```bash
 uv tool install --offline .
 ```
+Once a release is on PyPI, `uv tool install tmux-path-store` will work too.
+
 Then add the line for your shell startup file:
 ```bash
 eval $(tmux-path-store --bash)
@@ -48,6 +50,7 @@ The `--csh` output is compatible with both csh and tcsh. `--tcsh` is also accept
 | shd, sdh          | Set home directory (same as sd0)                |
 | cdh               | cd home directory (same as cd0)                 |
 | f[0-9]            | Edit file # with your $EDITOR                   |
+| ef <#> ...        | Edit file(s) # with your $EDITOR                |
 | sd[0-9] [dir]     | Set directory # to the pwd, or optional dir     |
 | sf[0-9] <file>    | Set file # to <file>                            |
 | rd[0-9], rf[0-9]  | Reset(delete) file/directory                    |
@@ -74,7 +77,7 @@ $ shd
 $ cd /garden; do-day-job; cd /forest; pick-magic-shrooms; etc...
 
 ### Ok, time to get back to world-domination
-### "cd Home", alias cdh='eval $(tmux-path-store cd 0)';
+### "cd Home", alias cdh='eval "$(tmux-path-store cd 0)"';
 $ cdh
 $ pwd
 /proj/collect_underpants/users/binklin
@@ -110,3 +113,9 @@ $ cd <redacted>; <redacted>
 $ sd1
 $ cdh
 ```
+
+# ⛯ Releases
+Versions and git tags use CalVer: `YYYY.M.N`, where `N` is a 1-based counter that
+restarts at 1 on the first release of each month (e.g. `2026.10.1`, `2026.10.2`,
+then `2026.11.1` in November). `tmux-path-store --version` reports the version of
+the installed release.
