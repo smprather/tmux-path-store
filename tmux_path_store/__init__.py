@@ -176,7 +176,7 @@ def normalize_db(raw: object) -> dict[str, dict[str, list[str]]]:
         raise DbError(f"expected a JSON object at the top level, found {type(raw).__name__}")
     db: dict[str, dict[str, list[str]]] = {}
     for window_name, entry in raw.items():
-        fields = entry if isinstance(entry, dict) else {}
+        fields: dict = entry if isinstance(entry, dict) else {}
         db[str(window_name)] = {key: normalize_slot_list(fields.get(key)) for key in FORD_KEYS}
     return db
 
