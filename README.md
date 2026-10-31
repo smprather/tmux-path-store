@@ -5,7 +5,6 @@
 **Your project's directories and files, one short command away.**
 
 [![CI](https://github.com/smprather/tmux-path-store/actions/workflows/ci.yml/badge.svg)](https://github.com/smprather/tmux-path-store/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/tmux-path-store)](https://pypi.org/project/tmux-path-store/)
 [![Python 3.14+](https://img.shields.io/badge/Python-3.14%2B-3776AB?logo=python&logoColor=white)](https://github.com/smprather/tmux-path-store/blob/main/pyproject.toml)
 
 [Quick start](#quick-start) · [Shell setup](#shell-setup) · [Commands](#commands) · [Editors](#editors) · [Scripting](#storage-and-scripting) · [Development](#development)
@@ -28,16 +27,7 @@ resources live across the filesystem.
 Use Linux or macOS with [tmux](https://github.com/tmux/tmux/wiki) on your `PATH`,
 [uv](https://docs.astral.sh/uv/), and Python **3.14 or later**.
 
-Install from PyPI:
-
-```bash
-uv tool install tmux-path-store
-```
-
-<details>
-<summary><strong>Install from source or offline</strong></summary>
-
-Install from a checkout:
+Install from a checkout (the package is not on PyPI yet):
 
 ```bash
 git clone https://github.com/smprather/tmux-path-store.git
@@ -47,8 +37,6 @@ uv tool install .
 
 Use `uv tool install --offline .` once Python and the build requirements are
 available locally.
-
-</details>
 
 Enable shortcuts in your current Bash session; see [shell setup](#shell-setup)
 for other shells and permanent configuration:
