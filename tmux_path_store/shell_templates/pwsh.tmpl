@@ -1,0 +1,80 @@
+function global:_tps_cd($Slot) {
+    $directory = & tmux-path-store get-dir --json $Slot
+    if ($LASTEXITCODE -ne 0) { throw 'tmux-path-store could not retrieve the directory' }
+    $directory = $directory | ConvertFrom-Json
+    if ($directory.Contains([char]92)) { throw 'PowerShell cannot navigate Unix names containing a literal backslash' }
+    Set-Location -LiteralPath $directory -ErrorAction Stop
+}
+function global:ld { & tmux-path-store 'list-dirs' @args }
+function global:lf { & tmux-path-store 'list-files' @args }
+function global:lda { & tmux-path-store 'list-dirs' '__all__' @args }
+function global:lfa { & tmux-path-store 'list-files' '__all__' @args }
+function global:lw { & tmux-path-store 'list-windows' @args }
+function global:dw { & tmux-path-store 'delete-window' @args }
+function global:shd { & tmux-path-store 'set-dir' '0' @args }
+function global:sdh { & tmux-path-store 'set-dir' '0' @args }
+function global:swd { & tmux-path-store 'swap-dirs' @args }
+function global:swf { & tmux-path-store 'swap-files' @args }
+function global:ef { & tmux-path-store 'open-files' @args }
+function global:tps { & tmux-path-store 'help' @args }
+function global:sd0 { & tmux-path-store 'set-dir' '0' @args }
+function global:sf0 { & tmux-path-store 'set-file' '0' @args }
+function global:rd0 { & tmux-path-store 'reset-dir' '0' @args }
+function global:rf0 { & tmux-path-store 'reset-file' '0' @args }
+function global:f0 { & tmux-path-store 'open-files' '0' @args }
+function global:sd1 { & tmux-path-store 'set-dir' '1' @args }
+function global:sf1 { & tmux-path-store 'set-file' '1' @args }
+function global:rd1 { & tmux-path-store 'reset-dir' '1' @args }
+function global:rf1 { & tmux-path-store 'reset-file' '1' @args }
+function global:f1 { & tmux-path-store 'open-files' '1' @args }
+function global:sd2 { & tmux-path-store 'set-dir' '2' @args }
+function global:sf2 { & tmux-path-store 'set-file' '2' @args }
+function global:rd2 { & tmux-path-store 'reset-dir' '2' @args }
+function global:rf2 { & tmux-path-store 'reset-file' '2' @args }
+function global:f2 { & tmux-path-store 'open-files' '2' @args }
+function global:sd3 { & tmux-path-store 'set-dir' '3' @args }
+function global:sf3 { & tmux-path-store 'set-file' '3' @args }
+function global:rd3 { & tmux-path-store 'reset-dir' '3' @args }
+function global:rf3 { & tmux-path-store 'reset-file' '3' @args }
+function global:f3 { & tmux-path-store 'open-files' '3' @args }
+function global:sd4 { & tmux-path-store 'set-dir' '4' @args }
+function global:sf4 { & tmux-path-store 'set-file' '4' @args }
+function global:rd4 { & tmux-path-store 'reset-dir' '4' @args }
+function global:rf4 { & tmux-path-store 'reset-file' '4' @args }
+function global:f4 { & tmux-path-store 'open-files' '4' @args }
+function global:sd5 { & tmux-path-store 'set-dir' '5' @args }
+function global:sf5 { & tmux-path-store 'set-file' '5' @args }
+function global:rd5 { & tmux-path-store 'reset-dir' '5' @args }
+function global:rf5 { & tmux-path-store 'reset-file' '5' @args }
+function global:f5 { & tmux-path-store 'open-files' '5' @args }
+function global:sd6 { & tmux-path-store 'set-dir' '6' @args }
+function global:sf6 { & tmux-path-store 'set-file' '6' @args }
+function global:rd6 { & tmux-path-store 'reset-dir' '6' @args }
+function global:rf6 { & tmux-path-store 'reset-file' '6' @args }
+function global:f6 { & tmux-path-store 'open-files' '6' @args }
+function global:sd7 { & tmux-path-store 'set-dir' '7' @args }
+function global:sf7 { & tmux-path-store 'set-file' '7' @args }
+function global:rd7 { & tmux-path-store 'reset-dir' '7' @args }
+function global:rf7 { & tmux-path-store 'reset-file' '7' @args }
+function global:f7 { & tmux-path-store 'open-files' '7' @args }
+function global:sd8 { & tmux-path-store 'set-dir' '8' @args }
+function global:sf8 { & tmux-path-store 'set-file' '8' @args }
+function global:rd8 { & tmux-path-store 'reset-dir' '8' @args }
+function global:rf8 { & tmux-path-store 'reset-file' '8' @args }
+function global:f8 { & tmux-path-store 'open-files' '8' @args }
+function global:sd9 { & tmux-path-store 'set-dir' '9' @args }
+function global:sf9 { & tmux-path-store 'set-file' '9' @args }
+function global:rd9 { & tmux-path-store 'reset-dir' '9' @args }
+function global:rf9 { & tmux-path-store 'reset-file' '9' @args }
+function global:f9 { & tmux-path-store 'open-files' '9' @args }
+function global:cdh { _tps_cd 0 }
+function global:cd0 { _tps_cd 0 }
+function global:cd1 { _tps_cd 1 }
+function global:cd2 { _tps_cd 2 }
+function global:cd3 { _tps_cd 3 }
+function global:cd4 { _tps_cd 4 }
+function global:cd5 { _tps_cd 5 }
+function global:cd6 { _tps_cd 6 }
+function global:cd7 { _tps_cd 7 }
+function global:cd8 { _tps_cd 8 }
+function global:cd9 { _tps_cd 9 }

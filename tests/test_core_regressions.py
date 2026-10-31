@@ -50,7 +50,7 @@ class CoreRegressionTests(unittest.TestCase):
         self.assertEqual(retrieved.returncode, 0, retrieved.stderr)
         self.assertEqual(retrieved.stdout.rstrip("\n"), str(target))
 
-    def test_invalid_utf8_database_has_an_eval_friendly_failure(self):
+    def test_invalid_utf8_database_fails_without_stdout(self):
         database = self.home / ".local/state/tmux_path_store/db.json"
         database.parent.mkdir(parents=True)
         database.write_bytes(b"\xff")
@@ -58,18 +58,9 @@ class CoreRegressionTests(unittest.TestCase):
         result = self.run_cli("cd", "1")
 
         self.assertEqual(result.returncode, 1)
-        self.assertEqual(result.stdout, "false\n")
+        self.assertEqual(result.stdout, "")
         self.assertNotIn("Traceback", result.stderr)
         self.assertEqual(database.read_bytes(), b"\xff")
-
-    def test_invalid_utf8_cached_binary_is_discarded(self):
-        holder = self.root / "tmux_server_binary"
-        holder.write_bytes(b"\xff")
-        try:
-            self.assertIsNone(module.cached_tmux_server_binary(holder))
-        except UnicodeDecodeError as exc:
-            self.fail(f"invalid cache must be ignored: {exc}")
-        self.assertFalse(holder.exists())
 
     def test_outside_tmux_uses_path_without_linux_process_discovery(self):
         binaries = self.root / "bin"
@@ -83,7 +74,7 @@ class CoreRegressionTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         database = self.home / ".local/state/tmux_path_store/db.json"
-        self.assertEqual(json.loads(database.read_text())["path-window"]["dirs"][0], "/tmp/from-path")
+        self.assertEqual(json.loads(database.read_text())["windows"]["path-window"]["dirs"]["0"]["path"], "/tmp/from-path")
 
     @unittest.skipUnless(Path("/proc/self/exe").exists(), "Linux /proc fallback")
     def test_discovery_recognizes_server_titles_and_launch_arguments(self):
@@ -108,19 +99,13 @@ class CoreRegressionTests(unittest.TestCase):
             "/usr/bin/tmux -L private -f /dev/null new-session -d -s project",
         ):
             with self.subTest(command=command):
-                holder = self.home / ".local/state/tmux_path_store/tmux_server_binary"
-                holder.unlink(missing_ok=True)
                 with (
                     mock.patch.dict(os.environ, {**env, "TPS_TEST_SERVER_COMMAND": command}, clear=True),
                     contextlib.redirect_stdout(io.StringIO()),
                     contextlib.redirect_stderr(io.StringIO()),
                 ):
-                    try:
-                        binary = module.discover_tmux_server_binary()
-                    except SystemExit:
-                        self.fail(f"could not discover tmux with process command {command!r}")
+                    binary = module.find_tmux_binary()
                 self.assertEqual(binary, Path(sys.executable).resolve())
-                self.assertEqual(holder.read_text(), str(Path(sys.executable).resolve()))
 
     def start_tmux(self):
         binary = shutil.which("tmux")

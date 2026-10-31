@@ -5,7 +5,7 @@
 **Your project's directories and files, one short command away.**
 
 [![CI](https://github.com/smprather/tmux-path-store/actions/workflows/ci.yml/badge.svg)](https://github.com/smprather/tmux-path-store/actions/workflows/ci.yml)
-[![Python 3.14+](https://img.shields.io/badge/Python-3.14%2B-3776AB?logo=python&logoColor=white)](https://github.com/smprather/tmux-path-store/blob/main/pyproject.toml)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://github.com/smprather/tmux-path-store/blob/main/pyproject.toml)
 
 [Quick start](#quick-start) · [Shell setup](#shell-setup) · [Commands](#commands) · [Editors](#editors) · [Scripting](#storage-and-scripting) · [Development](#development)
 
@@ -25,7 +25,7 @@ resources live across the filesystem.
 ## Quick start
 
 Use Linux or macOS with [tmux](https://github.com/tmux/tmux/wiki) on your `PATH`,
-[uv](https://docs.astral.sh/uv/), and Python **3.14 or later**.
+[uv](https://docs.astral.sh/uv/), and Python **3.11 or later**.
 
 Install from a checkout (the package is not on PyPI yet):
 
@@ -149,13 +149,14 @@ Directory and file slots are independent.
 | `ld [window ...]`, `lf [window ...]` | List directories or files for the current or named windows                                          |
 | `lda`, `lfa`                         | List directories or files for all saved windows                                                     |
 | `lw`                                 | List window names with saved bookmarks                                                              |
+| `recent [count]`                     | List recently used directories and files, most recent first                                         |
 | `rdN`, `rfN`                         | Clear a directory or file slot                                                                      |
 | `swd <a> <b>`, `swf <a> <b>`         | Swap two directory or file slots                                                                    |
 | `dw [window ...]`                    | Remove saved bookmarks for named windows; defaults to the current window                            |
 | `tps`                                | Show shortcut help (`tmux-path-store --help`)                                                       |
 
-Directory arguments are made absolute when saved. File arguments resolve to
-existing regular files. Each new window name needs a saved directory or file
+Directory arguments are made absolute when saved. File arguments are stored as absolute paths;
+files that do not exist yet are allowed. Each new window name needs a saved directory or file
 before you can navigate or edit its slots.
 
 ## Editors
@@ -172,13 +173,24 @@ containing spaces inside the value, for example
 references in the value are not evaluated.
 
 `ef` warns about empty slots and opens the defined ones; it fails if none are
-defined. Editor exit codes are preserved. In PowerShell, inspect `$LASTEXITCODE`.
+defined. Missing files are opened anyway after a warning, so an editor can
+create them. Editor exit codes are preserved. In PowerShell, inspect
+`$LASTEXITCODE`.
 
 ## Storage and scripting
 
 Bookmarks persist across tmux restarts in
-`~/.local/state/tmux_path_store/db.json`. Writes are atomic, coordinated with
-file locks, and use file permissions `0600`.
+`${XDG_STATE_HOME:-~/.local/state}/tmux_path_store/db.json`. Writes are atomic,
+coordinated with file locks, and use file permissions `0600`. The file is a
+versioned object; unset slots are simply absent, and stored slots record when
+they were saved and last used:
+
+```json
+{"version": 2, "windows": {"board-rev-a": {"dirs": {"0": {"path": "/work/board-rev-a", "saved_at": 1790000000000000000}}, "files": {}}}}
+```
+
+Older list and version-1 formats are migrated on the next write. `recent` ranks
+the current window's entries by `last_used`, then `saved_at`.
 
 The CLI also works without the shortcuts:
 
@@ -201,8 +213,12 @@ TMUX_WINDOW=board-rev-a tmux-path-store get-dir 0
 ```
 
 Otherwise, `TMUX_PANE` identifies the invoking pane's window when available.
-The compatibility commands `cd`, `edit-file`, and `edit-files` **emit POSIX shell
-code**; `open-files` launches the editor directly.
+Commands that only read saved data (`lw`, `ld`/`lf` with explicit windows) work
+without a reachable tmux server. Resolving the active window outside tmux uses
+the server's most recently used client, so scripts should set `TMUX_WINDOW`.
+`open-files` launches the editor directly; data commands print data, not shell
+code. csh/tcsh navigation is the exception: `csh-cd` returns the path of a
+private, self-deleting source file.
 
 ## Development
 
@@ -216,9 +232,10 @@ uv run ty check tmux_path_store tests
 Local integration tests exercise installed shells; CI requires all 12 supported
 shell names. tmux tests use private sockets and clean up only their own sessions.
 CLI and storage logic live in `tmux_path_store/__init__.py`;
-shell hooks live in `tmux_path_store/shells.py`.
+shell hooks live in `tmux_path_store/shell_templates/` and are loaded by
+`tmux_path_store/shells.py`.
 
 Versions and release tags use CalVer `YYYY.M.N`, with no `v` prefix or zero
 padding. `M` is the month and `N` starts at 1 each month; for example,
-`2026.10.3`, then `2026.11.1` at the next month's first release.
+`2026.10.4`, then `2026.11.1` at the next month's first release.
 Run `tmux-path-store --version` to inspect the installed version.

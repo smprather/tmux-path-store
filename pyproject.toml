@@ -1,11 +1,11 @@
 [project]
 name = "tmux-path-store"
-version = "2026.10.3"
+version = "2026.10.4"
 description = "Directory and file bookmarks for each tmux window."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
-requires-python = ">=3.14"
+requires-python = ">=3.11"
 dependencies = []
 
 [project.urls]
@@ -28,7 +28,7 @@ build-backend = "uv_build"
 
 [tool.ruff]
 line-length = 110
-target-version = "py314"
+target-version = "py311"
 
 [dependency-groups]
 dev = [

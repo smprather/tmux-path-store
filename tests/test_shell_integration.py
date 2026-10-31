@@ -248,7 +248,7 @@ class ShellIntegrationTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertIn(str(home / "secondary area"), result.stdout)
                 self.assertIn(str(home / "second file.txt"), result.stdout)
-                self.assertEqual(json.loads((home / ".local/state/tmux_path_store/db.json").read_text()), {})
+                self.assertEqual(json.loads((home / ".local/state/tmux_path_store/db.json").read_text()), {"version": 2, "windows": {}})
 
     @unittest.skipUnless(shutil.which("pwsh"), "PowerShell is not installed")
     def test_powershell_rejects_literal_backslash_without_entering_a_different_directory(self):

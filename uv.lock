@@ -1,6 +1,6 @@
 version = 1
 revision = 5
-requires-python = ">=3.14"
+requires-python = ">=3.11"
 
 [[package]]
 name = "ruff"
@@ -29,7 +29,7 @@ wheels = [
 
 [[package]]
 name = "tmux-path-store"
-version = "2026.10.3"
+version = "2026.10.4"
 source = { editable = "." }
 
 [package.dev-dependencies]

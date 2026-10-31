@@ -1,0 +1,82 @@
+def --env _tps_cd [index: int] {
+    let result = (^tmux-path-store get-dir --json $index | complete)
+    if $result.exit_code != 0 { error make {msg: $result.stderr} }
+    let directory = ($result.stdout | from json)
+    if $directory =~ '[\x00-\x08\x0b-\x1f]' {
+        error make {msg: 'Nushell cannot navigate names containing these control characters'}
+    }
+    cd ($directory + '/.')
+}
+def --wrapped ld [...args: string] { ^tmux-path-store 'list-dirs' ...$args }
+def --wrapped lf [...args: string] { ^tmux-path-store 'list-files' ...$args }
+def --wrapped lda [...args: string] { ^tmux-path-store 'list-dirs' '__all__' ...$args }
+def --wrapped lfa [...args: string] { ^tmux-path-store 'list-files' '__all__' ...$args }
+def --wrapped lw [...args: string] { ^tmux-path-store 'list-windows' ...$args }
+def --wrapped dw [...args: string] { ^tmux-path-store 'delete-window' ...$args }
+def --wrapped shd [...args: string] { ^tmux-path-store 'set-dir' '0' ...$args }
+def --wrapped sdh [...args: string] { ^tmux-path-store 'set-dir' '0' ...$args }
+def --wrapped swd [...args: string] { ^tmux-path-store 'swap-dirs' ...$args }
+def --wrapped swf [...args: string] { ^tmux-path-store 'swap-files' ...$args }
+def --wrapped ef [...args: string] { ^tmux-path-store 'open-files' ...$args }
+def --wrapped tps [...args: string] { ^tmux-path-store 'help' ...$args }
+def --wrapped sd0 [...args: string] { ^tmux-path-store 'set-dir' '0' ...$args }
+def --wrapped sf0 [...args: string] { ^tmux-path-store 'set-file' '0' ...$args }
+def --wrapped rd0 [...args: string] { ^tmux-path-store 'reset-dir' '0' ...$args }
+def --wrapped rf0 [...args: string] { ^tmux-path-store 'reset-file' '0' ...$args }
+def --wrapped f0 [...args: string] { ^tmux-path-store 'open-files' '0' ...$args }
+def --wrapped sd1 [...args: string] { ^tmux-path-store 'set-dir' '1' ...$args }
+def --wrapped sf1 [...args: string] { ^tmux-path-store 'set-file' '1' ...$args }
+def --wrapped rd1 [...args: string] { ^tmux-path-store 'reset-dir' '1' ...$args }
+def --wrapped rf1 [...args: string] { ^tmux-path-store 'reset-file' '1' ...$args }
+def --wrapped f1 [...args: string] { ^tmux-path-store 'open-files' '1' ...$args }
+def --wrapped sd2 [...args: string] { ^tmux-path-store 'set-dir' '2' ...$args }
+def --wrapped sf2 [...args: string] { ^tmux-path-store 'set-file' '2' ...$args }
+def --wrapped rd2 [...args: string] { ^tmux-path-store 'reset-dir' '2' ...$args }
+def --wrapped rf2 [...args: string] { ^tmux-path-store 'reset-file' '2' ...$args }
+def --wrapped f2 [...args: string] { ^tmux-path-store 'open-files' '2' ...$args }
+def --wrapped sd3 [...args: string] { ^tmux-path-store 'set-dir' '3' ...$args }
+def --wrapped sf3 [...args: string] { ^tmux-path-store 'set-file' '3' ...$args }
+def --wrapped rd3 [...args: string] { ^tmux-path-store 'reset-dir' '3' ...$args }
+def --wrapped rf3 [...args: string] { ^tmux-path-store 'reset-file' '3' ...$args }
+def --wrapped f3 [...args: string] { ^tmux-path-store 'open-files' '3' ...$args }
+def --wrapped sd4 [...args: string] { ^tmux-path-store 'set-dir' '4' ...$args }
+def --wrapped sf4 [...args: string] { ^tmux-path-store 'set-file' '4' ...$args }
+def --wrapped rd4 [...args: string] { ^tmux-path-store 'reset-dir' '4' ...$args }
+def --wrapped rf4 [...args: string] { ^tmux-path-store 'reset-file' '4' ...$args }
+def --wrapped f4 [...args: string] { ^tmux-path-store 'open-files' '4' ...$args }
+def --wrapped sd5 [...args: string] { ^tmux-path-store 'set-dir' '5' ...$args }
+def --wrapped sf5 [...args: string] { ^tmux-path-store 'set-file' '5' ...$args }
+def --wrapped rd5 [...args: string] { ^tmux-path-store 'reset-dir' '5' ...$args }
+def --wrapped rf5 [...args: string] { ^tmux-path-store 'reset-file' '5' ...$args }
+def --wrapped f5 [...args: string] { ^tmux-path-store 'open-files' '5' ...$args }
+def --wrapped sd6 [...args: string] { ^tmux-path-store 'set-dir' '6' ...$args }
+def --wrapped sf6 [...args: string] { ^tmux-path-store 'set-file' '6' ...$args }
+def --wrapped rd6 [...args: string] { ^tmux-path-store 'reset-dir' '6' ...$args }
+def --wrapped rf6 [...args: string] { ^tmux-path-store 'reset-file' '6' ...$args }
+def --wrapped f6 [...args: string] { ^tmux-path-store 'open-files' '6' ...$args }
+def --wrapped sd7 [...args: string] { ^tmux-path-store 'set-dir' '7' ...$args }
+def --wrapped sf7 [...args: string] { ^tmux-path-store 'set-file' '7' ...$args }
+def --wrapped rd7 [...args: string] { ^tmux-path-store 'reset-dir' '7' ...$args }
+def --wrapped rf7 [...args: string] { ^tmux-path-store 'reset-file' '7' ...$args }
+def --wrapped f7 [...args: string] { ^tmux-path-store 'open-files' '7' ...$args }
+def --wrapped sd8 [...args: string] { ^tmux-path-store 'set-dir' '8' ...$args }
+def --wrapped sf8 [...args: string] { ^tmux-path-store 'set-file' '8' ...$args }
+def --wrapped rd8 [...args: string] { ^tmux-path-store 'reset-dir' '8' ...$args }
+def --wrapped rf8 [...args: string] { ^tmux-path-store 'reset-file' '8' ...$args }
+def --wrapped f8 [...args: string] { ^tmux-path-store 'open-files' '8' ...$args }
+def --wrapped sd9 [...args: string] { ^tmux-path-store 'set-dir' '9' ...$args }
+def --wrapped sf9 [...args: string] { ^tmux-path-store 'set-file' '9' ...$args }
+def --wrapped rd9 [...args: string] { ^tmux-path-store 'reset-dir' '9' ...$args }
+def --wrapped rf9 [...args: string] { ^tmux-path-store 'reset-file' '9' ...$args }
+def --wrapped f9 [...args: string] { ^tmux-path-store 'open-files' '9' ...$args }
+def --env cdh [] { _tps_cd 0 }
+def --env cd0 [] { _tps_cd 0 }
+def --env cd1 [] { _tps_cd 1 }
+def --env cd2 [] { _tps_cd 2 }
+def --env cd3 [] { _tps_cd 3 }
+def --env cd4 [] { _tps_cd 4 }
+def --env cd5 [] { _tps_cd 5 }
+def --env cd6 [] { _tps_cd 6 }
+def --env cd7 [] { _tps_cd 7 }
+def --env cd8 [] { _tps_cd 8 }
+def --env cd9 [] { _tps_cd 9 }
