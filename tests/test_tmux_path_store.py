@@ -22,7 +22,7 @@ class TmuxPathStoreTestCase(unittest.TestCase):
         self.g_script_patch = mock.patch.object(module, "g_script", "tmux-path-store")
         self.g_script_patch.start()
         self.addCleanup(self.g_script_patch.stop)
-        self.python_exe = Path(f"/proc/{os.getpid()}/exe").resolve()
+        self.python_exe = Path(sys.executable).resolve()
         self.home_dir = tempfile.mkdtemp(prefix="tps-home-")
         self.addCleanup(shutil.rmtree, self.home_dir, ignore_errors=True)
 
@@ -78,7 +78,11 @@ class TmuxPathStoreTestCase(unittest.TestCase):
         with contextlib.ExitStack() as stack:
             stack.enter_context(mock.patch.dict(os.environ, env, clear=True))
             stack.enter_context(mock.patch.object(sys, "argv", argv))
-            stack.enter_context(mock.patch.object(module.shutil, "which", return_value=pgrep_path))
+            stack.enter_context(
+                mock.patch.object(
+                    module.shutil, "which", side_effect=lambda name: pgrep_path if name == "pgrep" else None
+                )
+            )
             if run_side_effect is not None:
                 run_mock = stack.enter_context(
                     mock.patch.object(module.subprocess, "run", side_effect=run_side_effect)
@@ -96,9 +100,7 @@ class TmuxPathStoreTestCase(unittest.TestCase):
                 )
             else:
                 check_output_mock = stack.enter_context(
-                    mock.patch.object(
-                        module.subprocess, "check_output", return_value=check_output_return
-                    )
+                    mock.patch.object(module.subprocess, "check_output", return_value=check_output_return)
                 )
             stack.enter_context(contextlib.redirect_stdout(stdout))
             stack.enter_context(contextlib.redirect_stderr(stderr))
@@ -144,9 +146,7 @@ class TmuxPathStoreTestCase(unittest.TestCase):
     # ------------------------------------------------------- helpers / units
 
     def test_tmux_holder_path_lives_in_state_dir(self):
-        with mock.patch.dict(
-            os.environ, {"HOME": self.home_dir, "TMPDIR": "/var/tmp/elsewhere"}, clear=True
-        ):
+        with mock.patch.dict(os.environ, {"HOME": self.home_dir, "TMPDIR": "/var/tmp/elsewhere"}, clear=True):
             self.assertEqual(
                 module.tmux_server_binary_holder_path(),
                 self._state_dir() / "tmux_server_binary",
@@ -195,7 +195,7 @@ class TmuxPathStoreTestCase(unittest.TestCase):
     def test_packaging_version_is_calver(self):
         with (REPO_ROOT / "pyproject.toml").open("rb") as fh:
             version = tomllib.load(fh)["project"]["version"]
-        self.assertRegex(version, r"^20\d{2}\.\d{1,2}\.\d+$")
+        self.assertRegex(version, r"^[0-9]{4}\.(?:[1-9]|1[0-2])\.[1-9][0-9]*$")
 
     # ------------------------------------------------------- argument errors
 
@@ -303,14 +303,18 @@ class TmuxPathStoreTestCase(unittest.TestCase):
         self.assertIn("Window: beta", result.stdout)
 
     def test_list_windows_works_when_current_window_is_absent(self):
-        result = self._run_cli(
-            ["tmux-path-store", "list-windows"], db=self._seed(), tmux_window="ghost"
-        )
+        result = self._run_cli(["tmux-path-store", "list-windows"], db=self._seed(), tmux_window="ghost")
         self.assertEqual(result.rc, 0)
         self.assertIn("alpha", result.stdout)
 
     def test_current_window_commands_still_require_a_db_entry(self):
-        for argv in (["cd", "0"], ["edit-file", "0"], ["reset-dir", "0"], ["swap-dirs", "0", "1"], ["delete-window"]):
+        for argv in (
+            ["cd", "0"],
+            ["edit-file", "0"],
+            ["reset-dir", "0"],
+            ["swap-dirs", "0", "1"],
+            ["delete-window"],
+        ):
             with self.subTest(argv=argv):
                 result = self._run_cli(["tmux-path-store", *argv], db=self._seed(), tmux_window="ghost")
                 self.assertEqual(result.rc, 1)
@@ -331,9 +335,7 @@ class TmuxPathStoreTestCase(unittest.TestCase):
         self.assertIn("beta", db)
 
     def test_unknown_subcommand_is_reported_before_the_window_gate(self):
-        result = self._run_cli(
-            ["tmux-path-store", "bogus-cmd"], db=self._seed(), tmux_window="ghost"
-        )
+        result = self._run_cli(["tmux-path-store", "bogus-cmd"], db=self._seed(), tmux_window="ghost")
         self.assertEqual(result.rc, 1)
         self.assertIn("Unrecognized sub-command", result.stderr)
         self.assertNotIn("not in the db", result.stderr)
@@ -350,7 +352,7 @@ class TmuxPathStoreTestCase(unittest.TestCase):
         self.assertEqual(result.rc, 0)
         self.assertIn("File 1 is not defined", result.stderr)
         self.assertNotIn("File 0 is not defined", result.stderr)
-        self.assertEqual(result.stdout, "$EDITOR /tmp/a /tmp/c")
+        self.assertEqual(result.stdout, "ed /tmp/a /tmp/c")
 
     def test_edit_files_with_no_defined_files_fails(self):
         result = self._run_cli(["tmux-path-store", "edit-files", "1", "2"], db=self._seed())
@@ -366,7 +368,7 @@ class TmuxPathStoreTestCase(unittest.TestCase):
         result = self._run_cli(
             ["tmux-path-store", "edit-file", "0"], db=self._seed(), env_extra={"EDITOR": "code --wait"}
         )
-        self.assertEqual(result.stdout, "$EDITOR /tmp/f0")
+        self.assertEqual(result.stdout, "code --wait /tmp/f0")
 
     def test_get_file_reports_file_not_directory(self):
         result = self._run_cli(["tmux-path-store", "get-file", "1"], db=self._seed())
@@ -480,7 +482,7 @@ class TmuxPathStoreTestCase(unittest.TestCase):
         self.assertEqual(holder, self._state_dir() / "tmux_server_binary")
         self.assertEqual(holder.read_text(encoding="utf-8"), str(self.python_exe))
         result.run_mock.assert_called_once_with(
-            ["/usr/bin/pgrep", "-f", "-u", "testuser", "tmux$"],
+            ["/usr/bin/pgrep", "-f", "-u", "testuser", r"(^|/)tmux([[:space:]:]|$)"],
             check=False,
             capture_output=True,
             text=True,
@@ -547,9 +549,7 @@ class TmuxPathStoreTestCase(unittest.TestCase):
         self.assertIn("pgrep", result.stderr)
 
     def test_missing_user_env_is_not_a_crash(self):
-        result = self._run_cli(
-            ["tmux-path-store", "list-windows"], tmux_window=None, user=None
-        )
+        result = self._run_cli(["tmux-path-store", "list-windows"], tmux_window=None, user=None)
         self.assertEqual(result.rc, 0)
         self.assertNotIn("Traceback", result.stderr)
         self.assertIn("Windows:", result.stdout)
@@ -588,16 +588,6 @@ class TmuxPathStoreTestCase(unittest.TestCase):
         self.assertEqual(result.rc, 0)
         self.assertTrue(any(alias.startswith("ef") for _, alias, _ in module.g_help_rows))
         self.assertIn("ef", result.stdout)
-
-    def test_posix_aliases_quote_the_command_substitution(self):
-        result = self._run_cli(["tmux-path-store", "--bash"])
-        self.assertIn('eval "$(tmux-path-store cd 0)"', result.stdout)
-        self.assertNotIn("eval $(", result.stdout.replace('eval "$(', "eval ("))
-
-    def test_csh_aliases_quote_the_backtick_substitution(self):
-        result = self._run_cli(["tmux-path-store", "--csh"])
-        self.assertIn('eval "`tmux-path-store cd 0`"', result.stdout)
-        self.assertIn("alias ef", result.stdout)
 
     def test_generated_aliases_cover_the_documented_surface(self):
         for flag in ("--bash", "--zsh", "--csh"):

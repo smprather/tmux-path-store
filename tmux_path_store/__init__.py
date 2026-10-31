@@ -14,6 +14,8 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import NoReturn
 
+from . import shells
+
 MIN_PYTHON = (3, 14)
 if sys.version_info < MIN_PYTHON:
     sys.exit(f"Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]} or later is required.\n")
@@ -29,8 +31,10 @@ WRITE_SUB_CMDS = frozenset(
 KNOWN_SUB_CMDS = frozenset(
     {
         "cd",
+        "csh-cd",
         "edit-file",
         "edit-files",
+        "open-files",
         *LISTING_SUB_CMDS,
         "set-dir",
         "set-file",
@@ -46,6 +50,7 @@ KNOWN_SUB_CMDS = frozenset(
 )
 FORD_BY_SUB_CMD = {
     "cd": "dirs",
+    "csh-cd": "dirs",
     "list-dirs": "dirs",
     "set-dir": "dirs",
     "reset-dir": "dirs",
@@ -53,6 +58,7 @@ FORD_BY_SUB_CMD = {
     "swap-dirs": "dirs",
     "edit-file": "files",
     "edit-files": "files",
+    "open-files": "files",
     "list-files": "files",
     "set-file": "files",
     "reset-file": "files",
@@ -127,8 +133,12 @@ def print_help() -> None:
     for mode, alias, action in g_help_rows:
         print(f"{mode.ljust(mode_width)}  {alias.ljust(alias_width)}  {action}")
     print()
-    print("posix shells:  eval \"$(tmux-path-store --bash)\"   or   --zsh")
+    print('POSIX shells:  eval "$(tmux-path-store --bash)"   or --zsh/--sh/--dash/--ksh/--mksh')
     print("csh/tcsh:      eval `tmux-path-store --csh`")
+    print("fish:          tmux-path-store --fish | source")
+    print("Nushell:       save --nu output to a file and source it")
+    print("PowerShell:    tmux-path-store --pwsh | Out-String | Invoke-Expression")
+    print("Xonsh:         exec($(tmux-path-store --xonsh))")
 
 
 def print_version() -> None:
@@ -187,7 +197,7 @@ def load_db(path: Path) -> dict[str, dict[str, list[str]]]:
     try:
         with path.open(encoding="utf-8") as fh:
             raw = json.load(fh)
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise DbError(f"cannot read {path}: {exc}") from exc
     try:
         return normalize_db(raw)
@@ -243,8 +253,8 @@ def cached_tmux_server_binary(holder: Path) -> Path | None:
         candidate = Path(holder.read_text(encoding="utf-8").strip())
         if candidate.is_file() and os.access(candidate, os.X_OK):
             return candidate
-    except OSError:
-        return None
+    except OSError, UnicodeDecodeError:
+        pass
     with contextlib.suppress(OSError):
         holder.unlink(missing_ok=True)
     return None
@@ -255,11 +265,16 @@ def discover_tmux_server_binary() -> Path:
     holder = tmux_server_binary_holder_path()
     if (cached := cached_tmux_server_binary(holder)) is not None:
         return cached
+    if tmux := shutil.which("tmux"):
+        return Path(tmux)
     pgrep = shutil.which("pgrep")
     if pgrep is None:
         eprint("pgrep was not found on PATH; cannot locate the tmux server process.")
     result = subprocess.run(
-        [pgrep, "-f", "-u", user, "tmux$"], check=False, capture_output=True, text=True
+        [pgrep, "-f", "-u", user, r"(^|/)tmux([[:space:]:]|$)"],
+        check=False,
+        capture_output=True,
+        text=True,
     )
     pids = result.stdout.split()
     if not pids:
@@ -284,9 +299,13 @@ def resolve_window() -> str:
         tmux_cmd = "tmux"
     else:
         tmux_cmd = str(discover_tmux_server_binary())
+    command = [tmux_cmd, "display-message", "-p"]
+    if pane := os.getenv("TMUX_PANE"):
+        command.extend(["-t", pane])
+    command.append("#W")
     try:
-        window = subprocess.check_output([tmux_cmd, "display-message", "-p", "#W"], text=True).rstrip()
-    except (OSError, subprocess.CalledProcessError):
+        window = subprocess.check_output(command, text=True).removesuffix("\n")
+    except OSError, subprocess.CalledProcessError:
         eprint(
             f"There was a problem running {tmux_cmd} display-message -p '#W'.\n"
             "There is probably not a running tmux session on this host.\n"
@@ -312,8 +331,27 @@ def require_args(args: list[str], minimum: int, maximum: int | None, usage: str)
         eprint(f"Wrong number of arguments. Usage: {g_script} {usage}")
 
 
-def editor_command() -> str:
-    return "$EDITOR" if os.environ.get("EDITOR") else "vi"
+def editor_arguments() -> list[str]:
+    try:
+        args = shlex.split(os.environ.get("EDITOR") or "vi")
+    except ValueError as exc:
+        eprint(f"Cannot parse EDITOR: {exc}")
+    if not args:
+        eprint("EDITOR does not contain a command.")
+    return args
+
+
+def selected_files(args: list[str], window: str, db: dict[str, dict[str, list[str]]]) -> list[str]:
+    files = []
+    for index in (parse_index(arg) for arg in args):
+        lookup = db[window]["files"][index]
+        if lookup == "":
+            wprint(f"File {index} is not defined for window '{window}'.")
+        else:
+            files.append(lookup)
+    if not files:
+        eprint(f"No files are defined for window '{window}' among: {' '.join(args)}.")
+    return files
 
 
 def most_recent_file(directory: Path) -> Path | None:
@@ -348,15 +386,20 @@ def needs_current_window(sub_cmd: str, args: list[str]) -> bool:
     return not (sub_cmd in (*LISTING_SUB_CMDS, "delete-window") and args)
 
 
-def dispatch(sub_cmd: str, args: list[str], window: str, db: dict[str, dict[str, list[str]]], ford: str) -> bool:
+def dispatch(
+    sub_cmd: str, args: list[str], window: str, db: dict[str, dict[str, list[str]]], ford: str
+) -> bool:
     """Run the sub-command against db; return True when the db must be written."""
-    if sub_cmd == "cd":
+    if sub_cmd in ("cd", "csh-cd"):
         require_args(args, 1, 1, "cd <index>")
         index = parse_index(args[0])
         dir_lookup = db[window][ford][index]
         if dir_lookup == "":
             eprint(f"Directory {args[0]} is not defined for window '{window}'.")
-        print(shell_words("cd", dir_lookup), end="")
+        if sub_cmd == "csh-cd":
+            print(shells.csh_cd_script(dir_lookup))
+        else:
+            print(shell_words("cd", dir_lookup), end="")
 
     elif sub_cmd == "edit-file":
         require_args(args, 1, 1, "edit-file <index>")
@@ -364,20 +407,11 @@ def dispatch(sub_cmd: str, args: list[str], window: str, db: dict[str, dict[str,
         lookup = db[window]["files"][index]
         if lookup == "":
             eprint(f"File {args[0]} is not defined for window '{window}'.")
-        print(f"{editor_command()} {shlex.quote(lookup)}", end="")
+        print(shell_words(*editor_arguments(), lookup), end="")
 
     elif sub_cmd == "edit-files":
         require_args(args, 1, None, "edit-files <index> [<index> ...]")
-        files = []
-        for index in (parse_index(arg) for arg in args):
-            lookup = db[window]["files"][index]
-            if lookup == "":
-                wprint(f"File {index} is not defined for window '{window}'.")
-            else:
-                files.append(lookup)
-        if not files:
-            eprint(f"No files are defined for window '{window}' among: {' '.join(args)}.")
-        print(editor_command() + " " + " ".join(shlex.quote(file) for file in files), end="")
+        print(shell_words(*editor_arguments(), *selected_files(args, window, db)), end="")
 
     elif sub_cmd in LISTING_SUB_CMDS:
         if args == ["__all__"]:
@@ -399,7 +433,7 @@ def dispatch(sub_cmd: str, args: list[str], window: str, db: dict[str, dict[str,
         require_args(args, 1, 2, "set-dir <index> [<dir>]")
         index = parse_index(args[0])
         db.setdefault(window, empty_entry())
-        db[window][ford][index] = args[1] if len(args) > 1 else os.getcwd()
+        db[window][ford][index] = os.path.abspath(args[1]) if len(args) > 1 else os.getcwd()
         return True
 
     elif sub_cmd == "set-file":
@@ -427,13 +461,19 @@ def dispatch(sub_cmd: str, args: list[str], window: str, db: dict[str, dict[str,
         return True
 
     elif sub_cmd in ("get-dir", "get-file"):
+        output_format = args[0] if args and args[0] in ("--json", "--null") else None
+        if output_format:
+            args = args[1:]
         require_args(args, 1, 1, f"{sub_cmd} <index>")
         index = parse_index(args[0])
         lookup = db[window][ford][index]
         if lookup == "":
             kind = "File" if ford == "files" else "Directory"
             eprint(f"{kind} {index} is not defined for window '{window}'.")
-        print(lookup)
+        if output_format == "--json":
+            print(json.dumps(lookup))
+        else:
+            print(lookup, end="\0" if output_format == "--null" else "\n")
 
     elif sub_cmd == "list-windows":
         print("Windows:")
@@ -460,70 +500,11 @@ def dispatch(sub_cmd: str, args: list[str], window: str, db: dict[str, dict[str,
 
 
 def print_posix_aliases(shell: str) -> None:
-    commands = [
-        f"alias ld='{g_script} list-dirs';",
-        f"alias lf='{g_script} list-files';",
-        f"alias lda='{g_script} list-dirs __all__';",
-        f"alias lfa='{g_script} list-files __all__';",
-        f"alias lw='{g_script} list-windows';",
-        f"alias dw='{g_script} delete-window';",
-        f"alias cdh='eval \"$({g_script} cd 0)\"';",
-        f"alias shd='{g_script} set-dir 0';",
-        f"alias sdh='{g_script} set-dir 0';",
-        f"alias swd='{g_script} swap-dirs';",
-        f"alias swf='{g_script} swap-files';",
-        f'ef() {{ eval "$({g_script} edit-files "$@")"; }};',
-        f"alias tps='{g_script} help';",
-    ]
-
-    for index in range(SLOTS):
-        commands.extend(
-            [
-                f"alias cd{index}='eval \"$({g_script} cd {index})\"';",
-                f"alias sd{index}='{g_script} set-dir {index}';",
-                f"alias sf{index}='{g_script} set-file {index}';",
-                f"alias rd{index}='{g_script} reset-dir {index}';",
-                f"alias rf{index}='{g_script} reset-file {index}';",
-                f"alias f{index}='eval \"$({g_script} edit-file {index})\"';",
-            ]
-        )
-
-    if shell == "zsh":
-        commands.append(f"compdef _gnu_generic tps={g_script} 2>/dev/null || true;")
-
-    print(" ".join(commands))
+    print(shells.init_script(shell, g_script), end="")
 
 
 def print_csh_aliases() -> None:
-    commands = [
-        f"alias ld '{g_script} list-dirs'",
-        f"alias lf '{g_script} list-files'",
-        f"alias lda '{g_script} list-dirs __all__'",
-        f"alias lfa '{g_script} list-files __all__'",
-        f"alias lw '{g_script} list-windows'",
-        f"alias dw '{g_script} delete-window'",
-        f"alias cdh 'eval \"`{g_script} cd 0`\"'",
-        f"alias shd '{g_script} set-dir 0'",
-        f"alias sdh '{g_script} set-dir 0'",
-        f"alias swd '{g_script} swap-dirs'",
-        f"alias swf '{g_script} swap-files'",
-        f"alias ef 'eval \"`{g_script} edit-files \\!*`\"'",
-        f"alias tps '{g_script} help'",
-    ]
-
-    for index in range(SLOTS):
-        commands.extend(
-            [
-                f"alias cd{index} 'eval \"`{g_script} cd {index}`\"'",
-                f"alias sd{index} '{g_script} set-dir {index}'",
-                f"alias sf{index} '{g_script} set-file {index}'",
-                f"alias rd{index} '{g_script} reset-dir {index}'",
-                f"alias rf{index} '{g_script} reset-file {index}'",
-                f"alias f{index} 'eval \"`{g_script} edit-file {index}`\"'",
-            ]
-        )
-
-    print("; ".join(commands))
+    print(shells.init_script("csh", g_script), end="")
 
 
 def cli() -> None:
@@ -536,16 +517,8 @@ def cli() -> None:
         sys.exit()
 
     # Add the matching eval line to your shell startup file to get these aliases.
-    if sys.argv[1] == "--bash":
-        print_posix_aliases("bash")
-        sys.exit()
-
-    if sys.argv[1] == "--zsh":
-        print_posix_aliases("zsh")
-        sys.exit()
-
-    if sys.argv[1] in ["--csh", "--tcsh"]:
-        print_csh_aliases()
+    if shell := shells.SHELL_FLAGS.get(sys.argv[1]):
+        print(shells.init_script(shell, g_script), end="")
         sys.exit()
 
     sub_cmd = sys.argv[1]
@@ -557,6 +530,7 @@ def cli() -> None:
     window = resolve_window()
     path = db_file_path()
     try:
+        editor_args = None
         with db_lock(sub_cmd in WRITE_SUB_CMDS):
             db = load_db(path)
             if needs_current_window(sub_cmd, args) and window not in db:
@@ -564,8 +538,14 @@ def cli() -> None:
                     f"Window {window} is not in the db. Use set-dir/set-file to init this window.\n"
                     "You should have shd/sd/sf aliases to these sub-commands."
                 )
-            if dispatch(sub_cmd, args, window, db, ford):
+            if sub_cmd == "open-files":
+                require_args(args, 1, None, "open-files <index> [<index> ...]")
+                editor_args = editor_arguments() + selected_files(args, window, db)
+            elif dispatch(sub_cmd, args, window, db, ford):
                 save_db(path, db)
+        if editor_args is not None:
+            result = subprocess.run(editor_args, check=False)
+            sys.exit(result.returncode if result.returncode >= 0 else 128 - result.returncode)
     except DbError as exc:
         eprint(f"{exc}. The file was left unchanged; fix or move it aside and retry.")
     except OSError as exc:

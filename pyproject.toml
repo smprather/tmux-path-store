@@ -1,12 +1,17 @@
 [project]
 name = "tmux-path-store"
-version = "2026.10.2"
-description = "Uses the Tmux window name as an index into a list of stored directory paths and files."
+version = "2026.10.3"
+description = "Directory and file bookmarks for each tmux window."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.14"
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/smprather/tmux-path-store"
+Repository = "https://github.com/smprather/tmux-path-store"
+Issues = "https://github.com/smprather/tmux-path-store/issues"
 
 [tool.uv]
 package = true
