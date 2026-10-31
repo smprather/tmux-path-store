@@ -1,6 +1,6 @@
 [project]
 name = "tmux-path-store"
-version = "2026.10.4"
+version = "2026.10.5"
 description = "Directory and file bookmarks for each tmux window."
 readme = "README.md"
 license = "MIT"
